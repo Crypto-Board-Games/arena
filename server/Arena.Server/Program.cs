@@ -52,6 +52,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 builder.Services.AddOpenApi();
+builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:8080", "http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 var app = builder.Build();
 
@@ -61,11 +72,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapControllers();
 app.MapHub<GameHub>("/hubs/game");
+app.MapHub<MatchmakingHub>("/hubs/matchmaking");
 
 var summaries = new[]
 {
