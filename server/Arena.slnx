@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Arena.Models/Arena.Models.csproj" />
+  <Project Path="Arena.Server/Arena.Server.csproj" />
+  <Project Path="Arena.Tests/Arena.Tests.csproj" />
+</Solution>
