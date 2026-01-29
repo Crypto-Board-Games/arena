@@ -1,7 +1,10 @@
-using Arena.Models;
 using Arena.Models.Entities;
 
+using Google.Apis.Auth;
+
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 using System.IdentityModel.Tokens.Jwt;
@@ -12,58 +15,62 @@ namespace Arena.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(ArenaDbContext dbContext, IConfiguration configuration) : ControllerBase
+public class AuthController(UserManager<ArenaUser> userManager, IConfiguration configuration) : ControllerBase
 {
-    private readonly ArenaDbContext _dbContext = dbContext;
+    private readonly UserManager<ArenaUser> _userManager = userManager;
     private readonly IConfiguration _configuration = configuration;
 
-    //[HttpPost("google")]
-    //public async Task<IActionResult> GoogleAuth([FromBody] GoogleAuthRequest request)
-    //{
-    //    try
-    //    {
-    //        var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleAuth([FromBody] GoogleAuthRequest request)
+    {
+        try
+        {
+            var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
 
-    //        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.GoogleId == payload.Subject);
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.GoogleId == payload.Subject);
 
-    //        if (user == null)
-    //        {
-    //            user = new ArenaUser
-    //            {
-    //                Id = Guid.NewGuid(),
-    //                GoogleId = payload.Subject,
-    //                Email = payload.Email,
-    //                DisplayName = payload.Name ?? payload.Email.Split('@')[0],
-    //                Elo = 1200,
-    //                Wins = 0,
-    //                Losses = 0,
-    //                CreatedAt = DateTime.UtcNow
-    //            };
-    //            _dbContext.Users.Add(user);
-    //            await _dbContext.SaveChangesAsync();
-    //        }
+            if (user == null)
+            {
+                user = new ArenaUser
+                {
+                    UserName = payload.Email,
+                    GoogleId = payload.Subject,
+                    Email = payload.Email,
+                    DisplayName = payload.Name ?? payload.Email?.Split('@')[0] ?? "Player",
+                    Elo = 1200,
+                    Wins = 0,
+                    Losses = 0,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-    //        var token = GenerateJwtToken(user);
+                var result = await _userManager.CreateAsync(user);
+                if (!result.Succeeded)
+                {
+                    return BadRequest(new { message = "Failed to create user", errors = result.Errors });
+                }
+            }
 
-    //        return Ok(new AuthResponse
-    //        {
-    //            Token = token,
-    //            User = new UserDto
-    //            {
-    //                Id = user.Id,
-    //                Email = user.Email,
-    //                DisplayName = user.DisplayName,
-    //                Elo = user.Elo,
-    //                Wins = user.Wins,
-    //                Losses = user.Losses
-    //            }
-    //        });
-    //    }
-    //    catch (InvalidJwtException)
-    //    {
-    //        return Unauthorized(new { message = "Invalid Google token" });
-    //    }
-    //}
+            var token = GenerateJwtToken(user);
+
+            return Ok(new AuthResponse
+            {
+                Token = token,
+                User = new UserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    DisplayName = user.DisplayName,
+                    Elo = user.Elo,
+                    Wins = user.Wins,
+                    Losses = user.Losses
+                }
+            });
+        }
+        catch (InvalidJwtException)
+        {
+            return Unauthorized(new { message = "Invalid Google token" });
+        }
+    }
 
     private string GenerateJwtToken(ArenaUser user)
     {
@@ -73,8 +80,8 @@ public class AuthController(ArenaDbContext dbContext, IConfiguration configurati
 
         var claims = new[]
         {
-            new Claim("sub", user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim("sub", user.Id),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
             new Claim("name", user.DisplayName),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
@@ -104,16 +111,8 @@ public class AuthResponse
 
 public class UserDto
 {
-    public required string Id
-    {
-        get; set;
-    }
-
-    public string? Email
-    {
-        get; set;
-    }
-
+    public required string Id { get; set; }
+    public string? Email { get; set; }
     public string DisplayName { get; set; } = string.Empty;
     public int Elo { get; set; }
     public int Wins { get; set; }
