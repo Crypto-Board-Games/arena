@@ -4,8 +4,6 @@ namespace Arena.Models.Entities;
 
 public class ArenaUser : IdentityUser
 {
-    public string? GoogleId { get; set; }
-
     public required string DisplayName
     {
         get; set;

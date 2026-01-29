@@ -1,6 +1,10 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Arena.Models.Entities;
+using Arena.Services;
+using Google.Apis.Auth;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-
+using Newtonsoft.Json;
 using System.Text;
 
 namespace Arena.Server;
@@ -10,6 +14,31 @@ public static partial class Extension
     public static WebApplicationBuilder ConfigureAuthenticates(this WebApplicationBuilder builder)
     {
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+
+            .AddGoogle(googleOptions =>
+            {
+                googleOptions.Events.OnCreatingTicket = context =>
+                {
+                    var tokens = context.Properties.GetTokens().ToList();
+                    var googleUser = JsonConvert.DeserializeObject<GoogleUser>(context.User.GetRawText());
+
+                    if (googleUser != null)
+                    {
+                        using (var scope = context.HttpContext.RequestServices.CreateScope())
+                        {
+                            foreach (var token in scope.ServiceProvider.GetRequiredService<PropertyService>().GetEnumerator(googleUser))
+                            {
+                                tokens.Add(token);
+                            }
+                        }
+                        context.Properties.StoreTokens(tokens);
+                    }
+                    return Task.CompletedTask;
+                };
+                googleOptions.SaveTokens = true;
+                googleOptions.ClientId = builder.Configuration["Google:ClientId"]!;
+                googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+            })
 
             .AddJwtBearer(options =>
             {

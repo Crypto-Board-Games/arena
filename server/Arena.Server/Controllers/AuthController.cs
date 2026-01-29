@@ -1,7 +1,7 @@
 using Arena.Models.Entities;
 
 using Google.Apis.Auth;
-
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,13 +13,9 @@ using System.Text;
 
 namespace Arena.Server.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController(UserManager<ArenaUser> userManager, IConfiguration configuration) : ControllerBase
+[ApiController, Route("api/[controller]")]
+public class AuthController(UserManager<ArenaUser> userManager, SignInManager<ArenaUser> signInManager, IConfiguration configuration) : ControllerBase
 {
-    private readonly UserManager<ArenaUser> _userManager = userManager;
-    private readonly IConfiguration _configuration = configuration;
-
     [HttpPost("google")]
     public async Task<IActionResult> GoogleAuth([FromBody] GoogleAuthRequest request)
     {
@@ -27,29 +23,32 @@ public class AuthController(UserManager<ArenaUser> userManager, IConfiguration c
         {
             var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
 
-            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.GoogleId == payload.Subject);
+            var result = await signInManager.ExternalLoginSignInAsync(GoogleDefaults.AuthenticationScheme, payload.Subject, isPersistent: false, bypassTwoFactor: true);
 
-            if (user == null)
+            if (!result.Succeeded)
             {
-                user = new ArenaUser
-                {
-                    UserName = payload.Email,
-                    GoogleId = payload.Subject,
-                    Email = payload.Email,
-                    DisplayName = payload.Name ?? payload.Email?.Split('@')[0] ?? "Player",
-                    Elo = 1200,
-                    Wins = 0,
-                    Losses = 0,
-                    CreatedAt = DateTime.UtcNow
-                };
+                var user = await userManager.Users.FirstOrDefaultAsync(u => u.GoogleId == payload.Subject);
 
-                var result = await _userManager.CreateAsync(user);
-                if (!result.Succeeded)
+                if (user == null)
                 {
-                    return BadRequest(new { message = "Failed to create user", errors = result.Errors });
+                    user = new ArenaUser
+                    {
+                        UserName = payload.Email,
+                        Email = payload.Email,
+                        DisplayName = payload.Name ?? payload.Email?.Split('@')[0] ?? "Player",
+                        Elo = 1200,
+                        Wins = 0,
+                        Losses = 0,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    var result = await _userManager.CreateAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        return BadRequest(new { message = "Failed to create user", errors = result.Errors });
+                    }
                 }
             }
-
             var token = GenerateJwtToken(user);
 
             return Ok(new AuthResponse
@@ -75,7 +74,7 @@ public class AuthController(UserManager<ArenaUser> userManager, IConfiguration c
     private string GenerateJwtToken(ArenaUser user)
     {
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "arena-secret-key-for-development-minimum-32-chars"));
+            Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? "arena-secret-key-for-development-minimum-32-chars"));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
@@ -87,8 +86,8 @@ public class AuthController(UserManager<ArenaUser> userManager, IConfiguration c
         };
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"] ?? "arena",
-            audience: _configuration["Jwt:Audience"] ?? "arena",
+            issuer: configuration["Jwt:Issuer"] ?? "arena",
+            audience: configuration["Jwt:Audience"] ?? "arena",
             claims: claims,
             expires: DateTime.UtcNow.AddDays(7),
             signingCredentials: credentials
