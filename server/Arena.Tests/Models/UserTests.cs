@@ -1,4 +1,3 @@
-using Xunit;
 using Arena.Models.Entities;
 
 namespace Arena.Tests.Models;
@@ -9,10 +8,9 @@ public class UserTests
     public void User_DefaultValues_AreCorrect()
     {
         // Arrange & Act
-        var user = new User
+        var user = new ArenaUser
         {
-            Id = Guid.NewGuid(),
-            GoogleId = "google123",
+            Id = Guid.NewGuid().ToString(),
             Email = "test@example.com",
             DisplayName = "Test User",
             CreatedAt = DateTime.UtcNow
@@ -29,14 +27,15 @@ public class UserTests
     public void User_Properties_CanBeSet()
     {
         // Arrange
-        var user = new User();
+        var user = new ArenaUser
+        {
+            DisplayName = "Player"
+        };
         var now = DateTime.UtcNow;
 
         // Act
-        user.Id = Guid.NewGuid();
-        user.GoogleId = "google456";
+        user.Id = Guid.NewGuid().ToString();
         user.Email = "user@test.com";
-        user.DisplayName = "Player";
         user.Elo = 1500;
         user.Wins = 10;
         user.Losses = 5;
@@ -44,8 +43,7 @@ public class UserTests
         user.LastPlayedAt = now;
 
         // Assert
-        Assert.NotEqual(Guid.Empty, user.Id);
-        Assert.Equal("google456", user.GoogleId);
+        Assert.NotEqual(Guid.Empty.ToString(), user.Id);
         Assert.Equal("user@test.com", user.Email);
         Assert.Equal("Player", user.DisplayName);
         Assert.Equal(1500, user.Elo);
@@ -59,17 +57,15 @@ public class UserTests
     public void User_RequiredProperties_CannotBeNull()
     {
         // Arrange & Act
-        var user = new User
+        var user = new ArenaUser
         {
-            Id = Guid.NewGuid(),
-            GoogleId = "google789",
+            Id = Guid.NewGuid().ToString(),
             Email = "required@test.com",
             DisplayName = "Required Test",
             CreatedAt = DateTime.UtcNow
         };
 
         // Assert
-        Assert.NotNull(user.GoogleId);
         Assert.NotNull(user.Email);
         Assert.NotNull(user.DisplayName);
     }

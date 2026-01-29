@@ -1,5 +1,6 @@
 using Arena.Models;
 using Arena.Models.Entities;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,27 +9,23 @@ namespace Arena.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class GamesController : ControllerBase
+public class GamesController(ArenaDbContext dbContext) : ControllerBase
 {
-    private readonly ArenaDbContext _dbContext;
-
-    public GamesController(ArenaDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly ArenaDbContext _dbContext = dbContext;
 
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> GetMyGames([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var userId = GetUserId();
-        if (!userId.HasValue)
+
+        if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized();
         }
 
         var query = _dbContext.Games
-            .Where(g => g.BlackPlayerId == userId.Value || g.WhitePlayerId == userId.Value)
+            .Where(g => g.BlackPlayerId.Equals(userId) || g.WhitePlayerId.Equals(userId))
             .Where(g => g.Status == GameStatus.Completed)
             .OrderByDescending(g => g.EndedAt);
 
@@ -92,24 +89,33 @@ public class GamesController : ControllerBase
         });
     }
 
-    private Guid? GetUserId()
-    {
-        var userIdClaim = User.FindFirst("sub")?.Value;
-        if (Guid.TryParse(userIdClaim, out var userId))
-        {
-            return userId;
-        }
-        return null;
-    }
+    string? GetUserId() => User.FindFirst("sub")?.Value;
 }
 
 public class GameDto
 {
     public Guid Id { get; set; }
-    public Guid BlackPlayerId { get; set; }
-    public Guid WhitePlayerId { get; set; }
-    public Guid? WinnerId { get; set; }
-    public string Status { get; set; } = string.Empty;
+
+    public required string BlackPlayerId
+    {
+        get; set;
+    }
+
+    public required string WhitePlayerId
+    {
+        get; set;
+    }
+
+    public string? WinnerId
+    {
+        get; set;
+    }
+
+    public required string Status
+    {
+        get; set;
+    }
+
     public DateTime CreatedAt { get; set; }
     public DateTime? EndedAt { get; set; }
 }
@@ -117,9 +123,15 @@ public class GameDto
 public class GameDetailDto
 {
     public Guid Id { get; set; }
+
     public UserDto? BlackPlayer { get; set; }
     public UserDto? WhitePlayer { get; set; }
-    public Guid? WinnerId { get; set; }
+
+    public string? WinnerId
+    {
+        get; set;
+    }
+
     public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime? EndedAt { get; set; }

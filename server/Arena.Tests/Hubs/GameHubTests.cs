@@ -3,9 +3,12 @@ using Arena.Models.Entities;
 using Arena.Server.Hubs;
 using Arena.Server.Models;
 using Arena.Server.Services;
+
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+
 using Moq;
+
 using System.Collections.Concurrent;
 using System.Security.Claims;
 
@@ -19,13 +22,13 @@ public class GameHubTests : IDisposable
     private readonly Mock<HubCallerContext> _mockContext;
     private readonly Mock<ISingleClientProxy> _mockCaller;
     private readonly Mock<IClientProxy> _mockGroupProxy;
-    private readonly IEloCalculator _eloCalculator;
+    private readonly EloCalculator _eloCalculator;
     private readonly ConcurrentDictionary<Guid, GameSession> _gameSessions;
-    private readonly ConcurrentDictionary<string, Guid> _connectionUserMap;
+    private readonly ConcurrentDictionary<string, string> _connectionUserMap;
     private readonly GameHub _hub;
-    
-    private readonly User _blackPlayer;
-    private readonly User _whitePlayer;
+
+    private readonly ArenaUser _blackPlayer;
+    private readonly ArenaUser _whitePlayer;
     private readonly Game _testGame;
 
     public GameHubTests()
@@ -35,10 +38,9 @@ public class GameHubTests : IDisposable
             .Options;
         _dbContext = new ArenaDbContext(options);
 
-        _blackPlayer = new User
+        _blackPlayer = new ArenaUser
         {
-            Id = Guid.NewGuid(),
-            GoogleId = "google-black",
+            Id = Guid.NewGuid().ToString(),
             Email = "black@test.com",
             DisplayName = "BlackPlayer",
             Elo = 1200,
@@ -47,10 +49,9 @@ public class GameHubTests : IDisposable
             CreatedAt = DateTime.UtcNow
         };
 
-        _whitePlayer = new User
+        _whitePlayer = new ArenaUser
         {
-            Id = Guid.NewGuid(),
-            GoogleId = "google-white",
+            Id = Guid.NewGuid().ToString(),
             Email = "white@test.com",
             DisplayName = "WhitePlayer",
             Elo = 1200,
@@ -82,10 +83,10 @@ public class GameHubTests : IDisposable
         _mockClients.Setup(c => c.Caller).Returns(_mockCaller.Object);
         _mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(_mockGroupProxy.Object);
         _mockClients.Setup(c => c.OthersInGroup(It.IsAny<string>())).Returns(_mockGroupProxy.Object);
-        
+
         _eloCalculator = new EloCalculator();
         _gameSessions = new ConcurrentDictionary<Guid, GameSession>();
-        _connectionUserMap = new ConcurrentDictionary<string, Guid>();
+        _connectionUserMap = new ConcurrentDictionary<string, string>();
 
         _hub = new GameHub(_dbContext, _eloCalculator, _gameSessions, _connectionUserMap)
         {
@@ -99,18 +100,20 @@ public class GameHubTests : IDisposable
     {
         _hub.Dispose();
         _dbContext.Dispose();
+
+        GC.SuppressFinalize(this);
     }
 
     private void SetupCallerAsBlackPlayer()
     {
         var connectionId = Guid.NewGuid().ToString();
         _mockContext.Setup(c => c.ConnectionId).Returns(connectionId);
-        
-        var claims = new List<Claim> { new Claim("sub", _blackPlayer.Id.ToString()) };
+
+        var claims = new List<Claim> { new("sub", _blackPlayer.Id.ToString()) };
         var identity = new ClaimsIdentity(claims, "test");
         var principal = new ClaimsPrincipal(identity);
         _mockContext.Setup(c => c.User).Returns(principal);
-        
+
         _connectionUserMap[connectionId] = _blackPlayer.Id;
     }
 
@@ -118,12 +121,12 @@ public class GameHubTests : IDisposable
     {
         var connectionId = Guid.NewGuid().ToString();
         _mockContext.Setup(c => c.ConnectionId).Returns(connectionId);
-        
-        var claims = new List<Claim> { new Claim("sub", _whitePlayer.Id.ToString()) };
+
+        var claims = new List<Claim> { new("sub", _whitePlayer.Id.ToString()) };
         var identity = new ClaimsIdentity(claims, "test");
         var principal = new ClaimsPrincipal(identity);
         _mockContext.Setup(c => c.User).Returns(principal);
-        
+
         _connectionUserMap[connectionId] = _whitePlayer.Id;
     }
 
@@ -147,8 +150,8 @@ public class GameHubTests : IDisposable
 
         await _hub.JoinGame(invalidGameId);
 
-        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected", 
-            It.Is<object?[]>(args => args[0] != null && args[0].ToString()!.Contains("game_not_found")), default), 
+        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected",
+            It.Is<object?[]>(args => args[0] != null && $"{args[0]}".Contains("game_not_found")), default),
             Times.Once);
     }
 
@@ -171,8 +174,8 @@ public class GameHubTests : IDisposable
 
         await _hub.PlaceStone(_testGame.Id.ToString(), 7, 7);
 
-        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected", 
-            It.Is<object?[]>(args => args[0] != null && args[0].ToString()!.Contains("not_your_turn")), default), 
+        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected",
+            It.Is<object?[]>(args => args[0] != null && $"{args[0]}".Contains("not_your_turn")), default),
             Times.Once);
     }
 
@@ -181,14 +184,14 @@ public class GameHubTests : IDisposable
     {
         SetupCallerAsBlackPlayer();
         await _hub.JoinGame(_testGame.Id.ToString());
-        
+
         var session = _gameSessions[_testGame.Id];
         session.Board[7, 7] = 1;
 
         await _hub.PlaceStone(_testGame.Id.ToString(), 7, 7);
 
-        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected", 
-            It.Is<object?[]>(args => args[0] != null && args[0].ToString()!.Contains("occupied")), default), 
+        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected",
+            It.Is<object?[]>(args => args[0] != null && $"{args[0]}".Contains("occupied")), default),
             Times.AtLeastOnce);
     }
 
@@ -200,8 +203,8 @@ public class GameHubTests : IDisposable
 
         await _hub.PlaceStone(_testGame.Id.ToString(), 15, 15);
 
-        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected", 
-            It.Is<object?[]>(args => args[0] != null && args[0].ToString()!.Contains("out_of_bounds")), default), 
+        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected",
+            It.Is<object?[]>(args => args[0] != null && $"{args[0]}".Contains("out_of_bounds")), default),
             Times.Once);
     }
 
@@ -210,7 +213,7 @@ public class GameHubTests : IDisposable
     {
         SetupCallerAsBlackPlayer();
         await _hub.JoinGame(_testGame.Id.ToString());
-        
+
         var session = _gameSessions[_testGame.Id];
         session.Board[7, 0] = 1;
         session.Board[7, 1] = 1;
@@ -219,11 +222,12 @@ public class GameHubTests : IDisposable
 
         await _hub.PlaceStone(_testGame.Id.ToString(), 4, 7);
 
-        _mockGroupProxy.Verify(c => c.SendCoreAsync("OnGameEnded", 
-            It.Is<object?[]>(args => args[0] != null && args[0].ToString()!.Contains("five_in_row")), default), 
+        _mockGroupProxy.Verify(c => c.SendCoreAsync("OnGameEnded",
+            It.Is<object?[]>(args => args[0] != null && $"{args[0]}".Contains("five_in_row")), default),
             Times.Once);
-        
-        var game = await _dbContext.Games.FindAsync(_testGame.Id);
+
+        var game = await _dbContext.Games.FindAsync([_testGame.Id], TestContext.Current.CancellationToken);
+
         Assert.Equal(GameStatus.Completed, game!.Status);
         Assert.Equal(_blackPlayer.Id, game.WinnerId);
     }
@@ -233,7 +237,7 @@ public class GameHubTests : IDisposable
     {
         SetupCallerAsBlackPlayer();
         await _hub.JoinGame(_testGame.Id.ToString());
-        
+
         var session = _gameSessions[_testGame.Id];
         session.Board[6, 6] = 1;
         session.Board[6, 8] = 1;
@@ -242,9 +246,9 @@ public class GameHubTests : IDisposable
 
         await _hub.PlaceStone(_testGame.Id.ToString(), 7, 7);
 
-        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected", 
-            It.Is<object?[]>(args => args[0] != null && 
-                (args[0].ToString()!.Contains("forbidden_33") || args[0].ToString()!.Contains("forbidden"))), default), 
+        _mockCaller.Verify(c => c.SendCoreAsync("OnMoveRejected",
+            It.Is<object?[]>(args => args[0] != null &&
+                ($"{args[0]}".Contains("forbidden_33") || $"{args[0]}".Contains("forbidden"))), default),
             Times.AtLeastOnce);
     }
 
@@ -256,11 +260,12 @@ public class GameHubTests : IDisposable
 
         await _hub.Resign(_testGame.Id.ToString());
 
-        _mockGroupProxy.Verify(c => c.SendCoreAsync("OnGameEnded", 
-            It.Is<object?[]>(args => args[0] != null && args[0].ToString()!.Contains("resign")), default), 
+        _mockGroupProxy.Verify(c => c.SendCoreAsync("OnGameEnded",
+            It.Is<object?[]>(args => args[0] != null && $"{args[0]}".Contains("resign")), default),
             Times.Once);
-        
-        var game = await _dbContext.Games.FindAsync(_testGame.Id);
+
+        var game = await _dbContext.Games.FindAsync([_testGame.Id], TestContext.Current.CancellationToken);
+
         Assert.Equal(GameStatus.Completed, game!.Status);
         Assert.Equal(_whitePlayer.Id, game.WinnerId);
     }
@@ -270,7 +275,7 @@ public class GameHubTests : IDisposable
     {
         SetupCallerAsBlackPlayer();
         await _hub.JoinGame(_testGame.Id.ToString());
-        
+
         var session = _gameSessions[_testGame.Id];
         session.Board[7, 0] = 1;
         session.Board[7, 1] = 1;
@@ -279,9 +284,9 @@ public class GameHubTests : IDisposable
 
         await _hub.PlaceStone(_testGame.Id.ToString(), 4, 7);
 
-        var winner = await _dbContext.Users.FindAsync(_blackPlayer.Id);
-        var loser = await _dbContext.Users.FindAsync(_whitePlayer.Id);
-        
+        var winner = await _dbContext.Users.FindAsync([_blackPlayer.Id], TestContext.Current.CancellationToken);
+        var loser = await _dbContext.Users.FindAsync([_whitePlayer.Id], TestContext.Current.CancellationToken);
+
         Assert.True(winner!.Elo > 1200);
         Assert.True(loser!.Elo < 1200);
         Assert.Equal(1, winner.Wins);

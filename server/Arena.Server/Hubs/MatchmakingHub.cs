@@ -1,5 +1,6 @@
 using Arena.Models;
 using Arena.Models.Entities;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -7,26 +8,22 @@ using Microsoft.EntityFrameworkCore;
 namespace Arena.Server.Hubs;
 
 [Authorize]
-public class MatchmakingHub : Hub
+public class MatchmakingHub(ArenaDbContext dbContext) : Hub
 {
-    private readonly ArenaDbContext _dbContext;
+    private readonly ArenaDbContext _dbContext = dbContext;
+
     private const int EloRangeBase = 200;
     private const int EloRangeIncrement = 100;
     private const int MaxEloRange = 500;
 
-    public MatchmakingHub(ArenaDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
-
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var userId = GetUserId();
-        if (userId.HasValue)
+
+        if (!string.IsNullOrEmpty(userId))
         {
-            var queueEntry = await _dbContext.MatchQueues
-                .FirstOrDefaultAsync(m => m.UserId == userId.Value);
-            
+            var queueEntry = await _dbContext.MatchQueues.FirstOrDefaultAsync(m => m.UserId.Equals(userId));
+
             if (queueEntry != null)
             {
                 _dbContext.MatchQueues.Remove(queueEntry);
@@ -39,22 +36,23 @@ public class MatchmakingHub : Hub
     public async Task JoinQueue()
     {
         var userId = GetUserId();
-        if (!userId.HasValue)
+
+        if (string.IsNullOrEmpty(userId))
         {
             await Clients.Caller.SendAsync("OnError", new { message = "Unauthorized" });
             return;
         }
 
-        var user = await _dbContext.Users.FindAsync(userId.Value);
+        var user = await _dbContext.Users.FindAsync(userId);
+
         if (user == null)
         {
             await Clients.Caller.SendAsync("OnError", new { message = "User not found" });
             return;
         }
 
-        var existingEntry = await _dbContext.MatchQueues
-            .FirstOrDefaultAsync(m => m.UserId == userId.Value);
-        
+        var existingEntry = await _dbContext.MatchQueues.FirstOrDefaultAsync(m => m.UserId.Equals(userId));
+
         if (existingEntry != null)
         {
             await Clients.Caller.SendAsync("OnQueueJoined", new { message = "Already in queue" });
@@ -64,7 +62,7 @@ public class MatchmakingHub : Hub
         var queueEntry = new MatchQueue
         {
             Id = Guid.NewGuid(),
-            UserId = userId.Value,
+            UserId = userId,
             Elo = user.Elo,
             QueuedAt = DateTime.UtcNow,
             ConnectionId = Context.ConnectionId
@@ -81,14 +79,15 @@ public class MatchmakingHub : Hub
     public async Task LeaveQueue()
     {
         var userId = GetUserId();
-        if (!userId.HasValue)
+
+        if (string.IsNullOrEmpty(userId))
         {
             return;
         }
 
         var queueEntry = await _dbContext.MatchQueues
-            .FirstOrDefaultAsync(m => m.UserId == userId.Value);
-        
+            .FirstOrDefaultAsync(m => m.UserId.Equals(userId));
+
         if (queueEntry != null)
         {
             _dbContext.MatchQueues.Remove(queueEntry);
@@ -120,7 +119,7 @@ public class MatchmakingHub : Hub
         var blackPlayer = entry.Elo >= opponent.Elo ? opponent : entry;
         var whitePlayer = entry.Elo >= opponent.Elo ? entry : opponent;
 
-        var game = new Game
+        var game = new Arena.Models.Entities.Game
         {
             Id = Guid.NewGuid(),
             BlackPlayerId = blackPlayer.UserId,
@@ -158,13 +157,5 @@ public class MatchmakingHub : Hub
         }
     }
 
-    private Guid? GetUserId()
-    {
-        var userIdClaim = Context.User?.FindFirst("sub")?.Value;
-        if (Guid.TryParse(userIdClaim, out var userId))
-        {
-            return userId;
-        }
-        return null;
-    }
+    string? GetUserId() => Context.User?.FindFirst("sub")?.Value;
 }

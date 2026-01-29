@@ -4,22 +4,45 @@ public class GameSession
 {
     public Guid GameId { get; set; }
     public int[,] Board { get; set; } = new int[15, 15];
-    public Guid CurrentTurnPlayerId { get; set; }
-    public Guid BlackPlayerId { get; set; }
-    public Guid WhitePlayerId { get; set; }
+    
+    public required string CurrentTurnPlayerId
+    {
+        get; set;
+    }
+
+    public required string BlackPlayerId
+    {
+        get; set;
+    }
+
+    public required string WhitePlayerId
+    {
+        get; set;
+    }
+
     public Timer? TurnTimer { get; set; }
     public int RemainingSeconds { get; set; } = 30;
-    public Guid? DisconnectedPlayerId { get; set; }
+
+    public string? DisconnectedPlayerId
+    {
+        get; set;
+    }
+
     public Timer? DisconnectGraceTimer { get; set; }
     public bool IsGameEnded { get; set; }
-    public Guid? WinnerId { get; set; }
+
+    public string? WinnerId
+    {
+        get; set;
+    }
+
     public string? EndReason { get; set; }
 
-    public Guid GetPlayerIdByColor(int color) => color == 1 ? BlackPlayerId : WhitePlayerId;
+    public string GetPlayerIdByColor(int color) => color == 1 ? BlackPlayerId : WhitePlayerId;
 
-    public int GetColorByPlayerId(Guid playerId) => playerId == BlackPlayerId ? 1 : 2;
+    public int GetColorByPlayerId(string playerId) => playerId == BlackPlayerId ? 1 : 2;
 
-    public Guid GetOpponentId(Guid playerId) => playerId == BlackPlayerId ? WhitePlayerId : BlackPlayerId;
+    public string GetOpponentId(string playerId) => playerId == BlackPlayerId ? WhitePlayerId : BlackPlayerId;
 
     public string SerializeBoard()
     {
