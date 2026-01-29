@@ -14,7 +14,7 @@ using System.Text;
 namespace Arena.Server.Controllers;
 
 [ApiController, Route("api/[controller]")]
-public class AuthController(UserManager<ArenaUser> userManager, SignInManager<ArenaUser> signInManager, IConfiguration configuration) : ControllerBase
+public class AuthController(UserManager<ArenaUser> userManager, SignInManager<ArenaUser> signInManager, ) : ControllerBase
 {
     [HttpPost("google")]
     public async Task<IActionResult> GoogleAuth([FromBody] GoogleAuthRequest request)
@@ -71,30 +71,7 @@ public class AuthController(UserManager<ArenaUser> userManager, SignInManager<Ar
         }
     }
 
-    private string GenerateJwtToken(ArenaUser user)
-    {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? "arena-secret-key-for-development-minimum-32-chars"));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
-        {
-            new Claim("sub", user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-            new Claim("name", user.DisplayName),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
-
-        var token = new JwtSecurityToken(
-            issuer: configuration["Jwt:Issuer"] ?? "arena",
-            audience: configuration["Jwt:Audience"] ?? "arena",
-            claims: claims,
-            expires: DateTime.UtcNow.AddDays(7),
-            signingCredentials: credentials
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
+    private
 }
 
 public class GoogleAuthRequest
