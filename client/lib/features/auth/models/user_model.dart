@@ -1,6 +1,6 @@
 class UserModel {
   final String id;
-  final String email;
+  final String? email;
   final String displayName;
   final int elo;
   final int wins;
@@ -8,7 +8,7 @@ class UserModel {
 
   const UserModel({
     required this.id,
-    required this.email,
+    this.email,
     required this.displayName,
     required this.elo,
     required this.wins,
@@ -18,7 +18,7 @@ class UserModel {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] as String,
-      email: json['email'] as String,
+      email: json['email'] as String?,
       displayName: json['displayName'] as String,
       elo: json['elo'] as int,
       wins: json['wins'] as int,
