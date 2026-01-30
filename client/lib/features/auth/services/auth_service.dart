@@ -1,36 +1,43 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../core/constants/api_constants.dart';
+import '../models/google_user.dart';
 import '../models/user_model.dart';
 
 class AuthService {
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'auth_user';
+  static const String _deviceIdKey = 'device_id';
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   Future<({String token, UserModel user})?> signInWithGoogle() async {
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
+      final googleAccount = await _googleSignIn.signIn();
+      if (googleAccount == null) {
         return null;
       }
 
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
+      final deviceId = await _getOrCreateDeviceId();
 
-      if (idToken == null) {
-        throw Exception('Failed to get Google ID token');
-      }
+      final googleUser = GoogleUser(
+        id: googleAccount.id,
+        email: googleAccount.email,
+        verifiedEmail: true,
+        name: googleAccount.displayName,
+        picture: googleAccount.photoUrl,
+        deviceId: deviceId,
+      );
 
       final response = await http.post(
         Uri.parse('${ApiConstants.baseUrl}${ApiConstants.authGoogle}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'idToken': idToken}),
+        body: jsonEncode(googleUser.toJson()),
       );
 
       if (response.statusCode != 200) {
@@ -92,6 +99,25 @@ class AuthService {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<String> _getOrCreateDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    var deviceId = prefs.getString(_deviceIdKey);
+
+    if (deviceId == null) {
+      deviceId = _generateDeviceId();
+      await prefs.setString(_deviceIdKey, deviceId);
+    }
+
+    return deviceId;
+  }
+
+  String _generateDeviceId() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = timestamp.hashCode.abs();
+    final platform = Platform.operatingSystem;
+    return '${platform}_${timestamp}_$random';
   }
 
   Future<void> _saveAuthData(String token, UserModel user) async {
