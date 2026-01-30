@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Arena Match Floating Glass UI</title>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#66a3ff",
+                        "bgBasic_dark": "#15171A",
+                        "bgContents_dark": "#21252A",
+                        "bgBorder_dark": "#575C68",
+                        "guide-text": "#C7CDDB",
+                        "danger": "#FF5757",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"]
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .gomoku-grid {
+            background-image: 
+                linear-gradient(to right, #575C68 1px, transparent 1px),
+                linear-gradient(to bottom, #575C68 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center;
+        }.stone-black {
+            background: radial-gradient(circle at 35% 35%, #5e5e5e, #1a1a1a 40%, #000000 85%);
+            box-shadow: 
+                inset 2px 2px 3px rgba(255,255,255,0.2),
+                inset -2px -2px 5px rgba(0,0,0,0.5),
+                3px 5px 8px rgba(0,0,0,0.6),
+                1px 2px 4px rgba(0,0,0,0.4);
+        }
+        .stone-white {
+            background: radial-gradient(circle at 35% 35%, #ffffff, #e0e0e0 40%, #a8a8a8 90%);
+            box-shadow: 
+                inset 2px 2px 5px rgba(255,255,255,1),
+                inset -2px -2px 5px rgba(0,0,0,0.2),
+                3px 5px 8px rgba(0,0,0,0.4),
+                1px 2px 4px rgba(0,0,0,0.2);
+        }
+        .glass-card {
+            background: rgba(33, 37, 42, 0.75);backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(87, 92, 104, 0.6);}
+        .last-move::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            background-color: #66a3ff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px #66a3ff;
+        }
+    </style>
+</head>
+<body class="bg-bgBasic_dark font-display text-white overflow-hidden h-screen w-screen flex flex-col items-center justify-center relative selection:bg-primary/30">
+<div class="absolute inset-0 pointer-events-none opacity-30 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-[#2a3038] via-bgBasic_dark to-bgBasic_dark"></div>
+<div class="absolute top-0 left-0 w-full p-6 md:p-8 flex justify-between items-start z-10 pointer-events-none">
+<div class="glass-card pointer-events-auto rounded-xl p-4 flex items-center gap-4 shadow-glass transform hover:scale-[1.02] transition-transform duration-300">
+<div class="relative">
+<div class="w-12 h-12 rounded-lg bg-center bg-cover border border-bgBorder_dark shadow-inner" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA_sVRfDdIriEDAfTQPcTViUB6mUYRGLwdoUe149xwQCvJATwjRtXyT-gYhzOH8tvcn06sMeN7-TdbQBmPb7oc1TCjcePvXrZ8AezWh23WgP_cB69J9EtQGigUfEd99Tahx8YJkugLNJpZ-5qLceLR2eJdHe-shU2rWREU5S4yCMMTDfm1icyu2RSiyf_9LoIFiRsPR9dQ0puFnNoON6LMnWv6Od650OLxY3FGftw4SoDPlD__lPl9hiwwApVzlKg430Ce6oHHdknY');"></div>
+<div class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-bgBorder_dark border border-bgContents_dark"></div>
+</div>
+<div class="flex flex-col min-w-[100px]">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="text-sm font-semibold tracking-wide text-gray-200">GrandMaster_X</span>
+<span class="text-[9px] font-bold bg-bgBorder_dark/50 px-1.5 py-0.5 rounded text-white/70">OPP</span>
+</div>
+<div class="flex items-end justify-between w-full gap-4">
+<span class="text-xs text-guide-text">Elo 2400</span>
+<span class="text-lg font-mono font-medium text-white/80 tabular-nums leading-none">04:30</span>
+</div>
+</div>
+</div>
+<div class="glass-card pointer-events-auto rounded-xl p-4 flex flex-row-reverse items-center gap-4 shadow-glass ring-1 ring-primary/30 transform hover:scale-[1.02] transition-transform duration-300">
+<div class="relative">
+<div class="w-12 h-12 rounded-lg bg-center bg-cover ring-2 ring-primary shadow-[0_0_15px_rgba(102,163,255,0.2)]" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBcM0Fl-ZFlZVEzsuJ7Aap0VlCpxeCviy2bfpYJ4gdruCFeVhAbwoFpZOdelqakcaOUs3kNb-L5wCKz6qYvjpsjb1SYDE8wTEiFswbPKfBwzoGx9QMitY0BLjleVccFTXlId1dH-HBS7vi8pkuX6VWsixtS3auQFeCNIxxqYqVz50L9EhMOSKveS_BQCCyNB_ep5naA6CXWXAhX15FXICD10RgwAwENlLwoy54u-aggw_-vW7UNoS28yvDK40ur9_oU8yQL3QaW04I');"></div>
+<div class="absolute -bottom-1 -left-1 w-3 h-3 rounded-full bg-primary border border-bgContents_dark animate-pulse"></div>
+</div>
+<div class="flex flex-col items-end min-w-[100px]">
+<div class="flex items-center gap-2 mb-0.5">
+<span class="text-[9px] font-bold bg-primary/20 text-primary px-1.5 py-0.5 rounded">YOU</span>
+<span class="text-sm font-semibold tracking-wide text-white">Player_One</span>
+</div>
+<div class="flex items-end justify-between w-full gap-4 flex-row-reverse">
+<span class="text-xs text-guide-text">Elo 2350</span>
+<span class="text-xl font-mono font-bold text-primary tabular-nums leading-none">05:00</span>
+</div>
+</div>
+</div>
+</div>
+<div class="relative z-0 flex items-center justify-center p-4 h-full w-full max-w-[100vh] aspect-square">
+<div class="relative w-full h-full max-w-[620px] max-h-[620px] rounded-lg bg-[#2b2f36] shadow-2xl border-4 border-[#3a3f48]">
+<div class="absolute inset-0 bg-[#22262b] rounded-md overflow-hidden">
+<div class="absolute inset-[24px] gomoku-grid opacity-90"></div>
+<div class="absolute top-0 left-0 w-full h-[24px] flex text-[10px] text-bgBorder_dark font-mono justify-around items-end pb-1 pl-[24px] pr-[24px]">
+<span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span><span>I</span><span>J</span><span>K</span><span>L</span><span>M</span><span>N</span><span>O</span>
+</div>
+<div class="absolute top-0 left-0 h-full w-[24px] flex flex-col text-[10px] text-bgBorder_dark font-mono justify-around items-end pr-1 pt-[24px] pb-[24px]">
+<span>15</span><span>14</span><span>13</span><span>12</span><span>11</span><span>10</span><span>9</span><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+</div>
+<div class="absolute inset-[24px] grid grid-cols-15 grid-rows-15">
+<div class="relative flex items-center justify-center col-start-8 row-start-8">
+<div class="w-[90%] h-[90%] rounded-full stone-black z-10"></div>
+</div>
+<div class="relative flex items-center justify-center col-start-8 row-start-9">
+<div class="w-[90%] h-[90%] rounded-full stone-white z-10"></div>
+</div>
+<div class="relative flex items-center justify-center col-start-9 row-start-9">
+<div class="w-[90%] h-[90%] rounded-full stone-black z-10"></div>
+</div>
+<div class="relative flex items-center justify-center col-start-7 row-start-8">
+<div class="w-[90%] h-[90%] rounded-full stone-white z-10"></div>
+</div>
+<div class="relative flex items-center justify-center col-start-9 row-start-8 last-move">
+<div class="w-[90%] h-[90%] rounded-full stone-black z-10"></div>
+</div>
+<div class="col-start-7 row-start-9 group cursor-pointer flex items-center justify-center">
+<div class="w-[60%] h-[60%] rounded-full bg-white/10 ring-2 ring-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+</div>
+<div class="col-start-10 row-start-10 group cursor-pointer flex items-center justify-center">
+<div class="w-[60%] h-[60%] rounded-full bg-white/10 ring-2 ring-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+<div class="glass-card px-2 py-2 rounded-2xl flex items-center gap-2 shadow-glass">
+<button class="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-white/5 text-guide-text hover:text-white transition-colors gap-1 group relative">
+<span class="material-symbols-outlined text-[22px]">history</span>
+<span class="text-[10px] font-medium">History</span>
+<div class="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-bgContents_dark border border-bgBorder_dark text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none">
+                    View moves
+                </div>
+</button>
+<div class="w-px h-8 bg-bgBorder_dark/50 mx-1"></div>
+<button class="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-white/5 text-guide-text hover:text-white transition-colors gap-1">
+<span class="material-symbols-outlined text-[22px]">handshake</span>
+<span class="text-[10px] font-medium">Draw</span>
+</button>
+<button class="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-danger/10 text-danger transition-colors gap-1 group">
+<span class="material-symbols-outlined text-[22px] group-hover:animate-bounce">flag</span>
+<span class="text-[10px] font-bold">Resign</span>
+</button>
+<div class="w-px h-8 bg-bgBorder_dark/50 mx-1"></div>
+<button class="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-white/5 text-guide-text hover:text-white transition-colors gap-1 relative">
+<span class="material-symbols-outlined text-[22px]">chat_bubble</span>
+<span class="text-[10px] font-medium">Chat</span>
+<div class="absolute top-2 right-3 w-2 h-2 rounded-full bg-primary animate-ping"></div>
+<div class="absolute top-2 right-3 w-2 h-2 rounded-full bg-primary"></div>
+</button>
+</div>
+</div>
+<div class="absolute top-24 right-8 z-30 animate-[fade-in-left_1s_ease-out_forwards] pointer-events-none">
+<div class="glass-card px-4 py-3 rounded-lg flex items-center gap-3 shadow-lg border-l-4 border-l-primary">
+<span class="material-symbols-outlined text-primary text-sm">info</span>
+<span class="text-sm text-white/90">Your turn to move.</span>
+</div>
+</div>
+
+</body></html>
