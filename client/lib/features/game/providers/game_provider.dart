@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/game_hub_service.dart';
+import 'package:flutter_riverpod/legacy.dart';
+
 import '../../auth/providers/auth_provider.dart';
+import '../services/game_hub_service.dart';
 import 'game_state.dart';
 
 final gameHubServiceProvider = Provider<GameHubService>((ref) {
@@ -38,12 +40,12 @@ class GameNotifier extends StateNotifier<GameState> {
       final y = data['y'] as int;
       final color = data['color'] as String;
       final remainingTime = data['remainingTime'] as int?;
-      
+
       final newBoard = List<List<int>>.from(
         state.board.map((row) => List<int>.from(row)),
       );
       newBoard[y][x] = color == 'black' ? 1 : 2;
-      
+
       state = state.copyWith(
         board: newBoard,
         currentTurn: color == 'black' ? 'white' : 'black',
@@ -52,23 +54,22 @@ class GameNotifier extends StateNotifier<GameState> {
     };
 
     _hubService.onMoveRejected = (data) {
-      state = state.copyWith(
-        errorMessage: data['reason'] as String?,
-      );
+      state = state.copyWith(errorMessage: data['reason'] as String?);
     };
 
     _hubService.onGameEnded = (data) {
       final eloChangeData = data['eloChange'] as Map<String, dynamic>?;
-      final myColorIsWinner = state.winnerId != null && 
+      final myColorIsWinner =
+          state.winnerId != null &&
           ((state.myColor == 'black' && data['winnerId'] == state.gameId) ||
-           (state.myColor == 'white' && data['winnerId'] != state.gameId));
-      
+              (state.myColor == 'white' && data['winnerId'] != state.gameId));
+
       state = state.copyWith(
         status: GameStatus.ended,
         winnerId: data['winnerId'] as String?,
         endReason: data['reason'] as String?,
-        eloChange: myColorIsWinner 
-            ? eloChangeData?['winner'] as int?
+        eloChange: myColorIsWinner
+            ? (eloChangeData?['winner'] as int?)
             : eloChangeData?['loser'] as int?,
       );
     };
@@ -91,8 +92,9 @@ class GameNotifier extends StateNotifier<GameState> {
     _hubService.onGameResumed = (data) {
       final boardData = data['board'] as List<dynamic>?;
       if (boardData != null) {
-        final newBoard = List.generate(15, (y) => 
-          List.generate(15, (x) => boardData[y * 15 + x] as int)
+        final newBoard = List.generate(
+          15,
+          (y) => List.generate(15, (x) => boardData[y * 15 + x] as int),
         );
         state = state.copyWith(
           board: newBoard,
@@ -107,10 +109,7 @@ class GameNotifier extends StateNotifier<GameState> {
   }
 
   Future<void> joinGame(String gameId) async {
-    state = state.copyWith(
-      gameId: gameId,
-      status: GameStatus.connecting,
-    );
+    state = state.copyWith(gameId: gameId, status: GameStatus.connecting);
 
     try {
       await _hubService.connect();
