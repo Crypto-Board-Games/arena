@@ -1,4 +1,6 @@
-﻿using Arena.Server.Models;
+﻿using Arena.Server.Core;
+using Arena.Server.Infrastructure;
+using Arena.Server.Models;
 using Arena.Server.Services;
 
 using Microsoft.AspNetCore.HttpLogging;
@@ -16,9 +18,27 @@ public static partial class Extensions
     {
         _ = builder.Services.AddMemoryCache()
 
+            .AddScoped<IAuthorizationService, AuthorizationService>()
+
+            .AddScoped<UserRepository>()
+
             .AddSingleton<IEloCalculator, EloCalculator>()
+
             .AddSingleton<ConcurrentDictionary<Guid, GameSession>>()
             .AddSingleton<ConcurrentDictionary<string, Guid>>()
+
+            .AddSingleton(implementationFactory =>
+            {
+                var configuration = implementationFactory.GetRequiredService<IConfiguration>();
+                var logger = implementationFactory.GetRequiredService<ILogger<JwtService>>();
+
+                return new JwtService(
+                    logger,
+                    issuer: configuration["Jwt:Issuer"],
+                    audience: configuration["Jwt:Audience"],
+                    secretKey: configuration["Jwt:SecretKey"]
+                );
+            })
 
             .AddHttpLogging(configureOptions =>
             {

@@ -1,73 +1,26 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using Arena.Models.Entities;
+using Arena.Server.Core;
+using Arena.Server.Infrastructure;
 using Arena.Services;
+
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
 
-public class AuthorizationService(IConfiguration configuration, UserManager<ArenaUser> userManager, SignInManager<ArenaUser> signInManager, PropertyService propertyService) : IAuthService
+using System.Security.Claims;
+
+namespace Arena.Server.Services;
+
+public class AuthorizationService(UserManager<ArenaUser> userManager, SignInManager<ArenaUser> signInManager, UserRepository userRepository, PropertyService propertyService) : IAuthorizationService
 {
-    public string GenerateJwtToken(ArenaUser user)
-    {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? "arena-secret-key-for-development-minimum-32-chars"));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
-        {
-            new Claim("sub", user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-            new Claim("name", user.DisplayName),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
-
-        var token = new JwtSecurityToken(
-            issuer: configuration["Jwt:Issuer"] ?? "arena",
-            audience: configuration["Jwt:Audience"] ?? "arena",
-            claims: claims,
-            expires: DateTime.UtcNow.AddDays(7),
-            signingCredentials: credentials
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    public ClaimsPrincipal? ValidateJwtToken(string? bearerToken, TokenValidationParameters validationParameters)
-    {
-        if (string.IsNullOrEmpty(bearerToken))
-        {
-            return null;
-        }
-
-        try
-        {
-            var token = bearerToken.Replace(JwtBearerDefaults.AuthenticationScheme, string.Empty).Trim();
-
-            var principal = new JwtSecurityTokenHandler().ValidateToken(token, validationParameters, out SecurityToken _);
-
-            return new ClaimsPrincipal(new ClaimsIdentity(principal.Claims, JwtBearerDefaults.AuthenticationScheme));
-        }
-        catch (Exception ex)
-        {
-            if (!ex.Message.StartsWith("IDX12709") && !ex.Message.StartsWith("IDX12741") && !ex.Message.StartsWith("IDX10223"))
-            {
-                logger.LogError("{ }", ex.Message);
-            }
-            return null;
-        }
-    }
-
     public async Task<(IdentityResult, ArenaUser?)> SignAsync<T>(T user, string scheme, string providerKey, string? email) where T : class
     {
         var signInResult = await signInManager.ExternalLoginSignInAsync(scheme, providerKey, false, true);
 
         if (signInResult.Succeeded && await userManager.FindByLoginAsync(scheme, providerKey) is ArenaUser pUser)
         {
-            if (user is DeviceIdentity i)
+            if (user is DeviceIdentity _)
             {
+                pUser.LoginProvider = scheme;
             }
             _ = await userManager.UpdateAsync(pUser);
 
@@ -85,6 +38,7 @@ public class AuthorizationService(IConfiguration configuration, UserManager<Aren
 
                 if (await userManager.FindByIdAsync(userId) is ArenaUser existUser)
                 {
+                    existUser.LoginProvider = scheme;
 
                     return (await RegisterExternalLoginAsync(user, existUser, scheme, providerKey), existUser);
                 }
@@ -142,7 +96,7 @@ public class AuthorizationService(IConfiguration configuration, UserManager<Aren
 
     async Task<(IdentityResult, ArenaUser?)> RegisterUserAsync<T>(T userInfo, string scheme, string? email, string providerKey) where T : class
     {
-        var i = userInfo as DeviceIdentity;
+        _ = userInfo as DeviceIdentity;
 
         var user = new ArenaUser
         {
@@ -150,6 +104,7 @@ public class AuthorizationService(IConfiguration configuration, UserManager<Aren
             Email = email,
             CreatedAt = DateTime.UtcNow,
             DisplayName = email?.Split('@')[0] ?? string.Empty,
+            LoginProvider = scheme
         };
         var result = await userManager.CreateAsync(user);
 

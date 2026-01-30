@@ -1,59 +1,30 @@
 using Arena.Models.Entities;
+using Arena.Server.Core;
+using Arena.Server.Services;
 
-using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace Arena.Server.Controllers;
 
 [ApiController, Route("api/[controller]")]
-public class AuthController(UserManager<ArenaUser> userManager, SignInManager<ArenaUser> signInManager, ) : ControllerBase
+public class AuthController(ILogger<AuthController> logger, IAuthorizationService authService, JwtService jwtService) : ControllerBase
 {
     [HttpPost("google")]
-    public async Task<IActionResult> GoogleAuth([FromBody] GoogleAuthRequest request)
+    public async Task<IActionResult> GoogleAuthAsync([FromBody] GoogleUser googleUser)
     {
-        try
+        if (string.IsNullOrEmpty(googleUser.Email) || string.IsNullOrEmpty(googleUser.Id))
         {
-            var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
+            return BadRequest("important element was missing from the sign-up process.");
+        }
+        (IdentityResult result, ArenaUser? user) = await authService.SignAsync(googleUser, GoogleDefaults.AuthenticationScheme, googleUser.Id, googleUser.Email);
 
-            var result = await signInManager.ExternalLoginSignInAsync(GoogleDefaults.AuthenticationScheme, payload.Subject, isPersistent: false, bypassTwoFactor: true);
-
-            if (!result.Succeeded)
-            {
-                var user = await userManager.Users.FirstOrDefaultAsync(u => u.GoogleId == payload.Subject);
-
-                if (user == null)
-                {
-                    user = new ArenaUser
-                    {
-                        UserName = payload.Email,
-                        Email = payload.Email,
-                        DisplayName = payload.Name ?? payload.Email?.Split('@')[0] ?? "Player",
-                        Elo = 1200,
-                        Wins = 0,
-                        Losses = 0,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    var result = await _userManager.CreateAsync(user);
-                    if (!result.Succeeded)
-                    {
-                        return BadRequest(new { message = "Failed to create user", errors = result.Errors });
-                    }
-                }
-            }
-            var token = GenerateJwtToken(user);
-
+        if (result.Succeeded && user != null)
+        {
             return Ok(new AuthResponse
             {
-                Token = token,
                 User = new UserDto
                 {
                     Id = user.Id,
@@ -62,16 +33,17 @@ public class AuthController(UserManager<ArenaUser> userManager, SignInManager<Ar
                     Elo = user.Elo,
                     Wins = user.Wins,
                     Losses = user.Losses
-                }
+                },
+                Token = jwtService.GenerateJwtToken(user)
             });
         }
-        catch (InvalidJwtException)
-        {
-            return Unauthorized(new { message = "Invalid Google token" });
-        }
-    }
 
-    private
+        foreach (var err in result.Errors)
+        {
+            logger.LogError("Code: { }\nDescription: { }", err.Code, err.Description);
+        }
+        return Unauthorized(new { message = result.Errors });
+    }
 }
 
 public class GoogleAuthRequest

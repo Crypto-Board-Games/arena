@@ -1,9 +1,6 @@
-namespace Arena.Server.Services;
+using Arena.Server.Core;
 
-public interface IEloCalculator
-{
-    (int winnerNewElo, int loserNewElo, int winnerChange, int loserChange) Calculate(int winnerElo, int loserElo);
-}
+namespace Arena.Server.Services;
 
 public class EloCalculator : IEloCalculator
 {

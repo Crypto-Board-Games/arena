@@ -1,7 +1,7 @@
 using Arena.Models;
 using Arena.Models.Entities;
+using Arena.Server.Core;
 using Arena.Server.Models;
-using Arena.Server.Services;
 
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -10,16 +10,8 @@ using System.Collections.Concurrent;
 
 namespace Arena.Server.Hubs;
 
-public class GameHub(
-    ArenaDbContext dbContext,
-    IEloCalculator eloCalculator,
-    ConcurrentDictionary<Guid, GameSession> gameSessions,
-    ConcurrentDictionary<string, string> connectionUserMap) : Hub
+public class GameHub(ArenaDbContext dbContext, IEloCalculator eloCalculator, ConcurrentDictionary<Guid, GameSession> gameSessions, ConcurrentDictionary<string, string> connectionUserMap) : Hub
 {
-    private readonly ArenaDbContext _dbContext = dbContext;
-    private readonly IEloCalculator _eloCalculator = eloCalculator;
-    private readonly ConcurrentDictionary<Guid, GameSession> _gameSessions = gameSessions;
-    private readonly ConcurrentDictionary<string, string> _connectionUserMap = connectionUserMap;
     private const int TurnTimeSeconds = 30;
     private const int DisconnectGraceSeconds = 30;
 
@@ -29,7 +21,7 @@ public class GameHub(
 
         if (!string.IsNullOrEmpty(userId))
         {
-            _connectionUserMap[Context.ConnectionId] = userId;
+            connectionUserMap[Context.ConnectionId] = userId;
         }
         await base.OnConnectedAsync();
     }
@@ -38,11 +30,11 @@ public class GameHub(
     {
         var userId = GetUserId();
 
-        _connectionUserMap.TryRemove(Context.ConnectionId, out _);
+        connectionUserMap.TryRemove(Context.ConnectionId, out _);
 
         if (!string.IsNullOrEmpty(userId))
         {
-            foreach (var session in _gameSessions.Values.Where(s => !s.IsGameEnded && (userId.Equals(s.BlackPlayerId) || userId.Equals(s.WhitePlayerId))))
+            foreach (var session in gameSessions.Values.Where(s => !s.IsGameEnded && (userId.Equals(s.BlackPlayerId) || userId.Equals(s.WhitePlayerId))))
             {
                 session.DisconnectedPlayerId = userId;
 
@@ -68,7 +60,7 @@ public class GameHub(
             return;
         }
 
-        var game = await _dbContext.Games.FindAsync(gameId);
+        var game = await dbContext.Games.FindAsync(gameId);
         if (game == null)
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x = -1, y = -1, reason = "game_not_found" });
@@ -86,7 +78,7 @@ public class GameHub(
 
         await Groups.AddToGroupAsync(Context.ConnectionId, gameIdStr);
 
-        var session = _gameSessions.GetOrAdd(gameId, _ => CreateSession(game));
+        var session = gameSessions.GetOrAdd(gameId, _ => CreateSession(game));
 
         if (userId.Equals(session.DisconnectedPlayerId))
         {
@@ -126,7 +118,7 @@ public class GameHub(
 
     public async Task PlaceStone(string gameIdStr, int x, int y)
     {
-        if (!Guid.TryParse(gameIdStr, out var gameId) || !_gameSessions.TryGetValue(gameId, out var session))
+        if (!Guid.TryParse(gameIdStr, out var gameId) || !gameSessions.TryGetValue(gameId, out var session))
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x, y, reason = "game_not_found" });
             return;
@@ -203,7 +195,7 @@ public class GameHub(
 
     public async Task Resign(string gameIdStr)
     {
-        if (!Guid.TryParse(gameIdStr, out var gameId) || !_gameSessions.TryGetValue(gameId, out var session))
+        if (!Guid.TryParse(gameIdStr, out var gameId) || !gameSessions.TryGetValue(gameId, out var session))
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x = -1, y = -1, reason = "game_not_found" });
             return;
@@ -254,7 +246,7 @@ public class GameHub(
 
     private async Task TimerTick(Guid gameId)
     {
-        if (!_gameSessions.TryGetValue(gameId, out var session) || session.IsGameEnded)
+        if (!gameSessions.TryGetValue(gameId, out var session) || session.IsGameEnded)
         {
             return;
         }
@@ -278,7 +270,7 @@ public class GameHub(
 
     private async Task HandleDisconnectTimeout(Guid gameId, string disconnectedUserId)
     {
-        if (!_gameSessions.TryGetValue(gameId, out var session) || session.IsGameEnded)
+        if (!gameSessions.TryGetValue(gameId, out var session) || session.IsGameEnded)
         {
             return;
         }
@@ -305,14 +297,14 @@ public class GameHub(
 
         var loserId = session.GetOpponentId(winnerId);
 
-        var winner = await _dbContext.Users.FindAsync(winnerId);
-        var loser = await _dbContext.Users.FindAsync(loserId);
-        var game = await _dbContext.Games.FindAsync(session.GameId);
+        var winner = await dbContext.Users.FindAsync(winnerId);
+        var loser = await dbContext.Users.FindAsync(loserId);
+        var game = await dbContext.Games.FindAsync(session.GameId);
 
         if (winner != null && loser != null && game != null)
         {
             var (winnerNewElo, loserNewElo, winnerChange, loserChange) =
-                _eloCalculator.Calculate(winner.Elo, loser.Elo);
+                eloCalculator.Calculate(winner.Elo, loser.Elo);
 
             winner.Elo = winnerNewElo;
             winner.Wins++;
@@ -327,7 +319,7 @@ public class GameHub(
             game.EndedAt = DateTime.UtcNow;
             game.CurrentBoardState = null;
 
-            await _dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
 
             await Clients.Group(session.GameId.ToString()).SendAsync("OnGameEnded", new
             {
@@ -344,11 +336,11 @@ public class GameHub(
 
     private async Task SaveBoardState(Guid gameId, GameSession session)
     {
-        var game = await _dbContext.Games.FindAsync(gameId);
+        var game = await dbContext.Games.FindAsync(gameId);
         if (game != null)
         {
             game.CurrentBoardState = session.SerializeBoard();
-            await _dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
         }
     }
 
@@ -361,7 +353,7 @@ public class GameHub(
             return userIdClaim;
         }
 
-        if (_connectionUserMap.TryGetValue(Context.ConnectionId, out var mappedUserId))
+        if (connectionUserMap.TryGetValue(Context.ConnectionId, out var mappedUserId))
         {
             return mappedUserId;
         }
