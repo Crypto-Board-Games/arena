@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../providers/auth_provider.dart';
 import '../models/auth_state.dart';
 
@@ -29,6 +29,7 @@ class LoginScreen extends ConsumerWidget {
     return Scaffold(
       body: Container(
         width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -37,82 +38,36 @@ class LoginScreen extends ConsumerWidget {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32.w),
+          child: ResponsiveContainer(
+            maxWidth: 400,
+            padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Spacer(flex: 2),
                 
                 // Logo
-                Container(
-                  width: 120.w,
-                  height: 120.w,
-                  decoration: BoxDecoration(
-                    color: AppTheme.boardColor,
-                    borderRadius: BorderRadius.circular(24.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Grid lines
-                        ...List.generate(5, (i) {
-                          final offset = (i - 2) * 20.0;
-                          return Positioned(
-                            child: Container(
-                              width: 80.w,
-                              height: 1,
-                              color: AppTheme.boardLineColor.withOpacity(0.5),
-                              margin: EdgeInsets.only(top: offset),
-                            ),
-                          );
-                        }),
-                        // Stones
-                        Positioned(
-                          left: 25.w,
-                          top: 25.w,
-                          child: _buildStone(true),
-                        ),
-                        Positioned(
-                          right: 25.w,
-                          bottom: 25.w,
-                          child: _buildStone(false),
-                        ),
-                        Positioned(
-                          child: _buildStone(true),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _buildLogo(context),
                 
-                SizedBox(height: 32.h),
+                const SizedBox(height: 32),
                 
                 // Title
                 Text(
                   'Arena',
                   style: TextStyle(
-                    fontSize: 48.sp,
+                    fontSize: responsive(context, mobile: 40, desktop: 48),
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textPrimary,
                     letterSpacing: 4,
                   ),
                 ),
                 
-                SizedBox(height: 8.h),
+                const SizedBox(height: 8),
                 
                 Text(
                   '온라인 오목 대전',
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: responsive(context, mobile: 14, desktop: 16),
                     color: AppTheme.textSecondary,
                     letterSpacing: 2,
                   ),
@@ -123,7 +78,7 @@ class LoginScreen extends ConsumerWidget {
                 // Google Sign In Button
                 SizedBox(
                   width: double.infinity,
-                  height: 56.h,
+                  height: 56,
                   child: ElevatedButton(
                     onPressed: authState.isLoading
                         ? null
@@ -132,15 +87,15 @@ class LoginScreen extends ConsumerWidget {
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black87,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 2,
                     ),
                     child: authState.isLoading
-                        ? SizedBox(
-                            width: 24.w,
-                            height: 24.w,
-                            child: const CircularProgressIndicator(
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.black54,
                             ),
@@ -150,19 +105,19 @@ class LoginScreen extends ConsumerWidget {
                             children: [
                               Image.network(
                                 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                                width: 24.w,
-                                height: 24.w,
-                                errorBuilder: (_, __, ___) => Icon(
+                                width: 24,
+                                height: 24,
+                                errorBuilder: (_, __, ___) => const Icon(
                                   Icons.g_mobiledata,
-                                  size: 28.sp,
+                                  size: 28,
                                   color: Colors.red,
                                 ),
                               ),
-                              SizedBox(width: 12.w),
-                              Text(
+                              const SizedBox(width: 12),
+                              const Text(
                                 'Google로 로그인',
                                 style: TextStyle(
-                                  fontSize: 16.sp,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -175,6 +130,59 @@ class LoginScreen extends ConsumerWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogo(BuildContext context) {
+    final logoSize = responsive<double>(context, mobile: 100, desktop: 120);
+    
+    return Container(
+      width: logoSize,
+      height: logoSize,
+      decoration: BoxDecoration(
+        color: AppTheme.boardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Grid lines
+            ...List.generate(5, (i) {
+              final offset = (i - 2) * 16.0;
+              return Positioned(
+                child: Container(
+                  width: logoSize * 0.7,
+                  height: 1,
+                  color: AppTheme.boardLineColor.withOpacity(0.5),
+                  margin: EdgeInsets.only(top: offset),
+                ),
+              );
+            }),
+            // Stones
+            Positioned(
+              left: logoSize * 0.2,
+              top: logoSize * 0.2,
+              child: _buildStone(true),
+            ),
+            Positioned(
+              right: logoSize * 0.2,
+              bottom: logoSize * 0.2,
+              child: _buildStone(false),
+            ),
+            Positioned(
+              child: _buildStone(true),
+            ),
+          ],
         ),
       ),
     );
