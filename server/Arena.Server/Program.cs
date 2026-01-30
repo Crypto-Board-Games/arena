@@ -27,7 +27,7 @@ using (var app = WebApplication.CreateBuilder(args).Configure().Build())
 
            .UseSwagger(setupAction =>
            {
-               setupAction.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_0;
+               setupAction.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_1;
            })
 
            .UseSwaggerUI(setupAction =>
