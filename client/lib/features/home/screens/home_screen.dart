@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/matchmaking_provider.dart';
 import '../providers/matchmaking_state.dart';
@@ -38,17 +38,18 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
+        child: ResponsiveContainer(
+          maxWidth: 480,
+          padding: const EdgeInsets.all(24),
           child: Column(
             children: [
               // User Profile Card
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(20.w),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.2),
@@ -61,8 +62,8 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     // Avatar
                     Container(
-                      width: 80.w,
-                      height: 80.w,
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppTheme.primary,
@@ -76,48 +77,48 @@ class HomeScreen extends ConsumerWidget {
                           user?.displayName.isNotEmpty == true
                               ? user!.displayName[0].toUpperCase()
                               : '?',
-                          style: TextStyle(
-                            fontSize: 32.sp,
+                          style: const TextStyle(
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.textPrimary,
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(height: 12.h),
+                    const SizedBox(height: 12),
                     
                     // Name
                     Text(
                       user?.displayName ?? 'Unknown',
-                      style: TextStyle(
-                        fontSize: 20.sp,
+                      style: const TextStyle(
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.textPrimary,
                       ),
                     ),
-                    SizedBox(height: 4.h),
+                    const SizedBox(height: 4),
                     
                     // Elo
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.star,
                           color: AppTheme.accent,
-                          size: 20.sp,
+                          size: 20,
                         ),
-                        SizedBox(width: 4.w),
+                        const SizedBox(width: 4),
                         Text(
                           'Elo ${user?.elo ?? 1200}',
-                          style: TextStyle(
-                            fontSize: 16.sp,
+                          style: const TextStyle(
+                            fontSize: 16,
                             color: AppTheme.accent,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 16.h),
+                    const SizedBox(height: 16),
                     
                     // Stats
                     Row(
@@ -126,13 +127,13 @@ class HomeScreen extends ConsumerWidget {
                         _buildStat('승', user?.wins ?? 0, AppTheme.success),
                         Container(
                           width: 1,
-                          height: 40.h,
+                          height: 40,
                           color: AppTheme.surfaceLight,
                         ),
                         _buildStat('패', user?.losses ?? 0, AppTheme.error),
                         Container(
                           width: 1,
-                          height: 40.h,
+                          height: 40,
                           color: AppTheme.surfaceLight,
                         ),
                         _buildStat(
@@ -154,31 +155,31 @@ class HomeScreen extends ConsumerWidget {
               if (matchmakingState.isSearching)
                 Column(
                   children: [
-                    SizedBox(
-                      width: 80.w,
-                      height: 80.w,
-                      child: const CircularProgressIndicator(
+                    const SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: CircularProgressIndicator(
                         strokeWidth: 3,
                         color: AppTheme.accent,
                       ),
                     ),
-                    SizedBox(height: 24.h),
-                    Text(
+                    const SizedBox(height: 24),
+                    const Text(
                       '상대를 찾는 중...',
                       style: TextStyle(
-                        fontSize: 18.sp,
+                        fontSize: 18,
                         color: AppTheme.textPrimary,
                       ),
                     ),
-                    SizedBox(height: 24.h),
+                    const SizedBox(height: 24),
                     TextButton(
                       onPressed: () {
                         ref.read(matchmakingProvider.notifier).cancelSearch();
                       },
-                      child: Text(
+                      child: const Text(
                         '취소',
                         style: TextStyle(
-                          fontSize: 16.sp,
+                          fontSize: 16,
                           color: AppTheme.error,
                         ),
                       ),
@@ -188,7 +189,7 @@ class HomeScreen extends ConsumerWidget {
               else
                 SizedBox(
                   width: double.infinity,
-                  height: 64.h,
+                  height: 64,
                   child: ElevatedButton(
                     onPressed: () {
                       ref.read(matchmakingProvider.notifier).startSearching();
@@ -196,18 +197,18 @@ class HomeScreen extends ConsumerWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.r),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.sports_esports, size: 28.sp),
-                        SizedBox(width: 12.w),
+                        Icon(Icons.sports_esports, size: 28),
+                        SizedBox(width: 12),
                         Text(
                           '대전 찾기',
                           style: TextStyle(
-                            fontSize: 20.sp,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -230,16 +231,16 @@ class HomeScreen extends ConsumerWidget {
         Text(
           value.toString(),
           style: TextStyle(
-            fontSize: 24.sp,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             color: color,
           ),
         ),
-        SizedBox(height: 4.h),
+        const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12.sp,
+          style: const TextStyle(
+            fontSize: 12,
             color: AppTheme.textSecondary,
           ),
         ),
