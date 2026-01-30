@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/theme/app_theme.dart';
-import '../providers/auth_provider.dart';
 import '../models/auth_state.dart';
+import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
@@ -43,7 +44,7 @@ class LoginScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Spacer(flex: 2),
-                
+
                 // Logo
                 Container(
                   width: 120.w,
@@ -71,7 +72,9 @@ class LoginScreen extends ConsumerWidget {
                               width: 80.w,
                               height: 1,
                               color: AppTheme.boardLineColor.withOpacity(0.5),
-                              margin: EdgeInsets.only(top: offset),
+                              margin: EdgeInsets.only(
+                                top: offset < 0 ? 0 : offset,
+                              ),
                             ),
                           );
                         }),
@@ -86,16 +89,14 @@ class LoginScreen extends ConsumerWidget {
                           bottom: 25.w,
                           child: _buildStone(false),
                         ),
-                        Positioned(
-                          child: _buildStone(true),
-                        ),
+                        Positioned(child: _buildStone(true)),
                       ],
                     ),
                   ),
                 ),
-                
+
                 SizedBox(height: 32.h),
-                
+
                 // Title
                 Text(
                   'Arena',
@@ -106,9 +107,9 @@ class LoginScreen extends ConsumerWidget {
                     letterSpacing: 4,
                   ),
                 ),
-                
+
                 SizedBox(height: 8.h),
-                
+
                 Text(
                   '온라인 오목 대전',
                   style: TextStyle(
@@ -117,9 +118,9 @@ class LoginScreen extends ConsumerWidget {
                     letterSpacing: 2,
                   ),
                 ),
-                
+
                 const Spacer(flex: 2),
-                
+
                 // Google Sign In Button
                 SizedBox(
                   width: double.infinity,
@@ -127,7 +128,9 @@ class LoginScreen extends ConsumerWidget {
                   child: ElevatedButton(
                     onPressed: authState.isLoading
                         ? null
-                        : () => ref.read(authProvider.notifier).signInWithGoogle(),
+                        : () => ref
+                              .read(authProvider.notifier)
+                              .signInWithGoogle(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black87,
@@ -170,7 +173,7 @@ class LoginScreen extends ConsumerWidget {
                           ),
                   ),
                 ),
-                
+
                 const Spacer(),
               ],
             ),

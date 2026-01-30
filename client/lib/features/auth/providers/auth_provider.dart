@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../models/auth_state.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -21,10 +22,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final storedAuth = await _authService.getStoredAuth();
-      
+
       if (storedAuth != null) {
-        final refreshedUser = await _authService.refreshUserData(storedAuth.token);
-        
+        final refreshedUser = await _authService.refreshUserData(
+          storedAuth.token,
+        );
+
         state = state.copyWith(
           status: AuthStatus.authenticated,
           token: storedAuth.token,
@@ -46,7 +49,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final result = await _authService.signInWithGoogle();
-      
+
       if (result != null) {
         state = state.copyWith(
           status: AuthStatus.authenticated,

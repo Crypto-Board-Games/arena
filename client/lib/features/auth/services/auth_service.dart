@@ -14,9 +14,7 @@ class AuthService {
   static const String _userKey = 'auth_user';
   static const String _deviceIdKey = 'device_id';
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   Future<({String token, UserModel user})?> signInWithGoogle() async {
     try {
