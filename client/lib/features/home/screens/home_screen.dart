@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -33,24 +34,24 @@ class HomeScreen extends ConsumerWidget {
             children: [
               // Header with logout
               _buildHeader(context, ref),
-              
+
               const SizedBox(height: 24),
 
               // User Profile Card with modern design
               _buildProfileCard(context, user),
-              
+
               const SizedBox(height: 24),
 
               // Stats Section
               _buildStatsSection(user),
-              
+
               const Spacer(),
 
               // Matchmaking Button with modern design
               matchmakingState.isSearching
                   ? _buildSearchingState(context, ref)
                   : _buildMatchmakingButton(context, ref),
-              
+
               const SizedBox(height: 32),
             ],
           ),
@@ -99,7 +100,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
-        
+
         // Logout button
         Container(
           decoration: BoxDecoration(
@@ -135,10 +136,7 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppTheme.main.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: AppTheme.main.withOpacity(0.2), width: 1),
         boxShadow: [
           BoxShadow(
             color: AppTheme.main.withOpacity(0.1),
@@ -195,7 +193,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Name
           Text(
             user?.displayName ?? 'Unknown',
@@ -206,7 +204,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 6),
-          
+
           // Elo with badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -255,22 +253,14 @@ class HomeScreen extends ConsumerWidget {
             color: AppTheme.green,
             icon: Icons.trending_up_rounded,
           ),
-          Container(
-            width: 1,
-            height: 50,
-            color: AppTheme.bgBorderDark,
-          ),
+          Container(width: 1, height: 50, color: AppTheme.bgBorderDark),
           _buildStat(
             label: '패배',
             value: user?.losses ?? 0,
             color: AppTheme.red,
             icon: Icons.trending_down_rounded,
           ),
-          Container(
-            width: 1,
-            height: 50,
-            color: AppTheme.bgBorderDark,
-          ),
+          Container(width: 1, height: 50, color: AppTheme.bgBorderDark),
           _buildStat(
             label: '승률',
             value: user != null && user.totalGames > 0
@@ -295,11 +285,7 @@ class HomeScreen extends ConsumerWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: color,
-              size: 16,
-            ),
+            Icon(icon, color: color, size: 16),
             const SizedBox(width: 4),
             Text(
               value.toString(),
@@ -333,10 +319,7 @@ class HomeScreen extends ConsumerWidget {
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [
-            AppTheme.main,
-            AppTheme.sub,
-          ],
+          colors: [AppTheme.main, AppTheme.sub],
         ),
         boxShadow: [
           BoxShadow(
@@ -349,7 +332,7 @@ class HomeScreen extends ConsumerWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onPressed: () {
+          onTap: () {
             ref.read(matchmakingProvider.notifier).startSearching();
           },
           borderRadius: BorderRadius.circular(20),
@@ -384,10 +367,7 @@ class HomeScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppTheme.bgContentsDark,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppTheme.main.withOpacity(0.3),
-          width: 2,
-        ),
+        border: Border.all(color: AppTheme.main.withOpacity(0.3), width: 2),
       ),
       child: Column(
         children: [
@@ -434,10 +414,7 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             '실력이 비슷한 상대와 매칭됩니다',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.fontTertiaryDark,
-            ),
+            style: TextStyle(fontSize: 14, color: AppTheme.fontTertiaryDark),
           ),
           const SizedBox(height: 24),
           TextButton.icon(
