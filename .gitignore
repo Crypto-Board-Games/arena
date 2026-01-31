@@ -370,3 +370,6 @@ FodyWeavers.xsd
 **/appsettings.Production.local.json
 *.secrets.json
 *.env
+
+# Auto-generated nul file from Windows command errors
+nul
