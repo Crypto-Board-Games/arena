@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/responsive_layout.dart';
-import '../providers/auth_provider.dart';
 import '../models/auth_state.dart';
+import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
@@ -59,9 +59,9 @@ class LoginScreen extends ConsumerWidget {
 
                 // Logo with glassmorphism effect
                 _buildLogo(context),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Title
                 Text(
                   'Arena',
@@ -79,9 +79,9 @@ class LoginScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Subtitle
                 Text(
                   '온라인 오목 대전',
@@ -96,20 +96,14 @@ class LoginScreen extends ConsumerWidget {
                 const SizedBox(height: 60),
 
                 // Feature highlights
-                _buildFeatureRow(
-                  icon: Icons.people_outline,
-                  text: '실시간 매칭',
-                ),
+                _buildFeatureRow(icon: Icons.people_outline, text: '실시간 매칭'),
                 const SizedBox(height: 12),
                 _buildFeatureRow(
                   icon: Icons.emoji_events_outlined,
                   text: 'Elo 랭킹 시스템',
                 ),
                 const SizedBox(height: 12),
-                _buildFeatureRow(
-                  icon: Icons.timer_outlined,
-                  text: '제한시간 대전',
-                ),
+                _buildFeatureRow(icon: Icons.timer_outlined, text: '제한시간 대전'),
 
                 const Spacer(flex: 2),
 
@@ -121,10 +115,7 @@ class LoginScreen extends ConsumerWidget {
                 // Terms text
                 Text(
                   '로그인하면 서비스 이용약관에 동의하게 됩니다',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.fontHideDark,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppTheme.fontHideDark),
                   textAlign: TextAlign.center,
                 ),
 
@@ -139,7 +130,7 @@ class LoginScreen extends ConsumerWidget {
 
   Widget _buildLogo(BuildContext context) {
     final logoSize = responsive<double>(context, mobile: 110, desktop: 130);
-    
+
     return Container(
       width: logoSize,
       height: logoSize,
@@ -166,10 +157,7 @@ class LoginScreen extends ConsumerWidget {
         child: Container(
           decoration: BoxDecoration(
             color: AppTheme.boardColor,
-            border: Border.all(
-              color: AppTheme.main.withOpacity(0.3),
-              width: 2,
-            ),
+            border: Border.all(color: AppTheme.main.withOpacity(0.3), width: 2),
           ),
           child: Stack(
             alignment: Alignment.center,
@@ -182,7 +170,7 @@ class LoginScreen extends ConsumerWidget {
                     width: logoSize * 0.65,
                     height: 1.5,
                     color: AppTheme.boardLineColor.withOpacity(0.4),
-                    margin: EdgeInsets.only(top: offset),
+                    margin: EdgeInsets.only(top: offset < 0 ? 0 : offset),
                   ),
                 );
               }),
@@ -193,7 +181,7 @@ class LoginScreen extends ConsumerWidget {
                     width: 1.5,
                     height: logoSize * 0.65,
                     color: AppTheme.boardLineColor.withOpacity(0.4),
-                    margin: EdgeInsets.only(left: offset),
+                    margin: EdgeInsets.only(left: offset < 0 ? 0 : offset),
                   ),
                 );
               }),
@@ -208,9 +196,7 @@ class LoginScreen extends ConsumerWidget {
                 bottom: logoSize * 0.22,
                 child: _buildStone(false, logoSize * 0.18),
               ),
-              Positioned(
-                child: _buildStone(true, logoSize * 0.15),
-              ),
+              Positioned(child: _buildStone(true, logoSize * 0.15)),
             ],
           ),
         ),
@@ -242,10 +228,7 @@ class LoginScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeatureRow({
-    required IconData icon,
-    required String text,
-  }) {
+  Widget _buildFeatureRow({required IconData icon, required String text}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -255,11 +238,7 @@ class LoginScreen extends ConsumerWidget {
             color: AppTheme.main.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            color: AppTheme.main,
-            size: 20,
-          ),
+          child: Icon(icon, color: AppTheme.main, size: 20),
         ),
         const SizedBox(width: 12),
         Text(
@@ -287,10 +266,7 @@ class LoginScreen extends ConsumerWidget {
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [
-            AppTheme.white,
-            const Color(0xFFF8F9FA),
-          ],
+          colors: [AppTheme.white, const Color(0xFFF8F9FA)],
         ),
         boxShadow: [
           BoxShadow(
