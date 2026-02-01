@@ -66,10 +66,7 @@ class HomeScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppTheme.primary,
-                        border: Border.all(
-                          color: AppTheme.accent,
-                          width: 3,
-                        ),
+                        border: Border.all(color: AppTheme.accent, width: 3),
                       ),
                       child: Center(
                         child: Text(
@@ -85,7 +82,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     SizedBox(height: 12.h),
-                    
+
                     // Name
                     Text(
                       user?.displayName ?? 'Unknown',
@@ -96,16 +93,12 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     SizedBox(height: 4.h),
-                    
+
                     // Elo
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.star,
-                          color: AppTheme.accent,
-                          size: 20.sp,
-                        ),
+                        Icon(Icons.star, color: AppTheme.accent, size: 20.sp),
                         SizedBox(width: 4.w),
                         Text(
                           'Elo ${user?.elo ?? 1200}',
@@ -118,7 +111,7 @@ class HomeScreen extends ConsumerWidget {
                       ],
                     ),
                     SizedBox(height: 16.h),
-                    
+
                     // Stats
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -147,9 +140,9 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              
+
               const Spacer(),
-              
+
               // Matchmaking Button
               if (matchmakingState.isSearching)
                 Column(
@@ -168,6 +161,14 @@ class HomeScreen extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 18.sp,
                         color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      '대기 ${matchmakingState.waitingSeconds}s · 범위 ±${matchmakingState.currentRange}',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: AppTheme.textSecondary,
                       ),
                     ),
                     SizedBox(height: 24.h),
@@ -215,8 +216,26 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-              
+
               const Spacer(),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => context.go('/ranking'),
+                      child: const Text('랭킹'),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => context.go('/profile'),
+                      child: const Text('프로필'),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -238,10 +257,7 @@ class HomeScreen extends ConsumerWidget {
         SizedBox(height: 4.h),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12.sp,
-            color: AppTheme.textSecondary,
-          ),
+          style: TextStyle(fontSize: 12.sp, color: AppTheme.textSecondary),
         ),
       ],
     );

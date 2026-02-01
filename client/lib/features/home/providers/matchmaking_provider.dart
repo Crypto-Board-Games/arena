@@ -10,10 +10,11 @@ final matchmakingHubServiceProvider = Provider<MatchmakingHubService>((ref) {
   return service;
 });
 
-final matchmakingProvider = StateNotifierProvider<MatchmakingNotifier, MatchmakingState>((ref) {
-  final hubService = ref.watch(matchmakingHubServiceProvider);
-  return MatchmakingNotifier(hubService);
-});
+final matchmakingProvider =
+    StateNotifierProvider<MatchmakingNotifier, MatchmakingState>((ref) {
+      final hubService = ref.watch(matchmakingHubServiceProvider);
+      return MatchmakingNotifier(hubService);
+    });
 
 class MatchmakingNotifier extends StateNotifier<MatchmakingState> {
   final MatchmakingHubService _hubService;
@@ -23,12 +24,13 @@ class MatchmakingNotifier extends StateNotifier<MatchmakingState> {
   }
 
   void _setupListeners() {
-    _hubService.onQueueJoined = (data) {
-      state = state.copyWith(status: MatchmakingStatus.searching);
-    };
-
-    _hubService.onQueueLeft = (data) {
-      state = state.copyWith(status: MatchmakingStatus.idle);
+    _hubService.onMatchmakingStatus = (data) {
+      state = state.copyWith(
+        status: MatchmakingStatus.searching,
+        waitingSeconds:
+            (data['waitingSeconds'] as int?) ?? state.waitingSeconds,
+        currentRange: (data['currentRange'] as int?) ?? state.currentRange,
+      );
     };
 
     _hubService.onMatchFound = (data) {
@@ -36,7 +38,6 @@ class MatchmakingNotifier extends StateNotifier<MatchmakingState> {
         status: MatchmakingStatus.found,
         gameId: data['gameId'] as String?,
         opponentName: data['opponentName'] as String?,
-        opponentElo: data['opponentElo'] as int?,
         myColor: data['yourColor'] as String?,
       );
     };
@@ -54,7 +55,7 @@ class MatchmakingNotifier extends StateNotifier<MatchmakingState> {
 
     try {
       await _hubService.connect();
-      await _hubService.joinQueue();
+      await _hubService.joinMatchmaking();
     } catch (e) {
       state = state.copyWith(
         status: MatchmakingStatus.error,
@@ -65,7 +66,7 @@ class MatchmakingNotifier extends StateNotifier<MatchmakingState> {
 
   Future<void> cancelSearch() async {
     try {
-      await _hubService.leaveQueue();
+      await _hubService.leaveMatchmaking();
       await _hubService.disconnect();
       state = const MatchmakingState();
     } catch (e) {

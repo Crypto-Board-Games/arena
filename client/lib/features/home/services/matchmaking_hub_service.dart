@@ -5,13 +5,13 @@ typedef MatchEventCallback = void Function(Map<String, dynamic> data);
 
 class MatchmakingHubService {
   final SignalRService _signalR;
-  
-  MatchEventCallback? onQueueJoined;
-  MatchEventCallback? onQueueLeft;
+
+  MatchEventCallback? onMatchmakingStatus;
   MatchEventCallback? onMatchFound;
   MatchEventCallback? onError;
 
-  MatchmakingHubService() : _signalR = SignalRService(ApiConstants.matchmakingHub);
+  MatchmakingHubService()
+    : _signalR = SignalRService(ApiConstants.matchmakingHub);
 
   void setToken(String? token) {
     _signalR.setToken(token);
@@ -27,15 +27,9 @@ class MatchmakingHubService {
   }
 
   void _setupListeners() {
-    _signalR.on('OnQueueJoined', (args) {
+    _signalR.on('OnMatchmakingStatus', (args) {
       if (args != null && args.isNotEmpty) {
-        onQueueJoined?.call(_toMap(args[0]));
-      }
-    });
-
-    _signalR.on('OnQueueLeft', (args) {
-      if (args != null && args.isNotEmpty) {
-        onQueueLeft?.call(_toMap(args[0]));
+        onMatchmakingStatus?.call(_toMap(args[0]));
       }
     });
 
@@ -52,12 +46,12 @@ class MatchmakingHubService {
     });
   }
 
-  Future<void> joinQueue() async {
-    await _signalR.invoke('JoinQueue');
+  Future<void> joinMatchmaking() async {
+    await _signalR.invoke('JoinMatchmaking');
   }
 
-  Future<void> leaveQueue() async {
-    await _signalR.invoke('LeaveQueue');
+  Future<void> leaveMatchmaking() async {
+    await _signalR.invoke('LeaveMatchmaking');
   }
 
   Map<String, dynamic> _toMap(Object? obj) {
