@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text;
+using System.Text.Json;
 using System.Collections.Concurrent;
 using Arena.Models;
 using Arena.Server.Hubs;
@@ -10,14 +13,28 @@ using Arena.Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<ArenaDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (!string.IsNullOrWhiteSpace(connectionString) && connectionString.TrimStart().StartsWith("Host=", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseNpgsql(connectionString);
+    }
+    else
+    {
+        options.UseSqlite(connectionString ?? "Data Source=arena.db");
+    }
+});
 
 builder.Services.AddSingleton<IEloCalculator, EloCalculator>();
 builder.Services.AddSingleton<ConcurrentDictionary<Guid, GameSession>>();
 builder.Services.AddSingleton<ConcurrentDictionary<string, Guid>>();
 
 builder.Services.AddSignalR();
+
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -50,8 +67,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
-
-builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
@@ -68,16 +83,55 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ArenaDbContext>();
+    if (db.Database.ProviderName != null && db.Database.ProviderName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        db.Database.EnsureCreated();
+    }
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+
+        HealthReportEntry? databaseEntry = report.Entries.TryGetValue("database", out var entry)
+            ? entry
+            : (HealthReportEntry?)null;
+
+        var databaseStatus = databaseEntry.HasValue && databaseEntry.Value.Status == HealthStatus.Healthy
+            ? "Connected"
+            : "Disconnected";
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["status"] = report.Status.ToString(),
+            ["database"] = databaseStatus,
+            ["timestamp"] = DateTime.UtcNow.ToString("O")
+        };
+
+        if (databaseEntry.HasValue && databaseEntry.Value.Exception != null)
+        {
+            payload["error"] = databaseEntry.Value.Exception.Message;
+        }
+
+        await context.Response.WriteAsync(JsonSerializer.Serialize(payload));
+    }
+});
+
 app.MapHub<GameHub>("/hubs/game");
 app.MapHub<MatchmakingHub>("/hubs/matchmaking");
 
