@@ -370,3 +370,14 @@ FodyWeavers.xsd
 **/appsettings.Production.local.json
 *.secrets.json
 *.env
+
+# Tooling artifacts
+nul
+
+# Local dev databases
+*.db
+*.db-shm
+*.db-wal
+
+# Stitch workspace binding
+.stitch-project.json
