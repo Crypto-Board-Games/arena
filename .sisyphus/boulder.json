@@ -1,6 +1,9 @@
 {
   "active_plan": "/home/cyberprophet/source/arena/.sisyphus/plans/arena.md",
   "started_at": "2026-01-28T07:26:05.297Z",
-  "session_ids": ["ses_3fdaaa2d6ffe7izEbgTCUp89rO"],
+  "session_ids": [
+    "ses_3fdaaa2d6ffe7izEbgTCUp89rO",
+    "ses_3e8a07c9cffe85APsgaz8t2slp"
+  ],
   "plan_name": "arena"
 }

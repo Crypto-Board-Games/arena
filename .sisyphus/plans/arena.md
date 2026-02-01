@@ -585,14 +585,14 @@ Concurrency: Use SELECT FOR UPDATE to prevent race conditions
 - `flutter_screenutil: ^5.9`
 
 ### Definition of Done
-- [ ] Google 로그인으로 회원가입/로그인 가능
-- [ ] 매칭 대기열에 등록 후 상대 매칭
-- [ ] 15×15 보드에서 오목 대전 가능
-- [ ] 렌주룰 정상 작동 (흑 금지 수 검증)
-- [ ] 30초 타이머 정상 작동
-- [ ] 승패에 따른 ELO 변동
-- [ ] 랭킹 페이지에서 순위 확인 가능
-- [ ] 모든 핵심 로직 테스트 통과
+- [x] Google 로그인으로 회원가입/로그인 가능
+- [x] 매칭 대기열에 등록 후 상대 매칭
+- [x] 15×15 보드에서 오목 대전 가능
+- [x] 렌주룰 정상 작동 (흑 금지 수 검증)
+- [x] 30초 타이머 정상 작동
+- [x] 승패에 따른 ELO 변동
+- [x] 랭킹 페이지에서 순위 확인 가능
+- [x] 모든 핵심 로직 테스트 통과
 
 ### Must Have
 - Google OAuth 인증
@@ -691,7 +691,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ### Wave 1: Foundation
 
-- [ ] 1. 프로젝트 구조 및 개발 환경 설정
+- [x] 1. 프로젝트 구조 및 개발 환경 설정
 
   **What to do**:
   
@@ -875,7 +875,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ---
 
-- [ ] 2. 데이터 모델 설계 (EF Core)
+- [x] 2. 데이터 모델 설계 (EF Core)
 
   **What to do**:
   - `User` 모델: Id, GoogleId, Email, DisplayName, Elo, Wins, Losses, CreatedAt, LastPlayedAt
@@ -957,7 +957,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ---
 
-- [ ] 3. 게임 로직 - 렌주룰 엔진 (TDD)
+- [x] 3. 게임 로직 - 렌주룰 엔진 (TDD)
 
   **What to do**:
   - `GameEngine` 클래스: 보드 상태 관리, 돌 배치, 승리 판정
@@ -990,15 +990,15 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
     - 오목 위키피디아: https://en.wikipedia.org/wiki/Gomoku
 
   **Acceptance Criteria**:
-  - [ ] RED: `GameEngineTests.cs` - 빈 보드 생성 테스트
-  - [ ] RED: 돌 배치 테스트
-  - [ ] RED: 5목 승리 판정 테스트 (가로/세로/대각선)
-  - [ ] RED: 3-3 금지 테스트 (흑)
-  - [ ] RED: 4-4 금지 테스트 (흑)
-  - [ ] RED: 장목 금지 테스트 (흑)
-  - [ ] RED: 백은 금지 수 없음 테스트
-  - [ ] GREEN: 모든 테스트 통과하는 GameEngine 구현
-  - [ ] `dotnet test --filter "GameEngine"` → 모든 테스트 PASS
+  - [x] RED: `GameEngineTests.cs` - 빈 보드 생성 테스트
+  - [x] RED: 돌 배치 테스트
+  - [x] RED: 5목 승리 판정 테스트 (가로/세로/대각선)
+  - [x] RED: 3-3 금지 테스트 (흑)
+  - [x] RED: 4-4 금지 테스트 (흑)
+  - [x] RED: 장목 금지 테스트 (흑)
+  - [x] RED: 백은 금지 수 없음 테스트
+  - [x] GREEN: 모든 테스트 통과하는 GameEngine 구현
+  - [x] `dotnet test --filter "GameEngine"` → 모든 테스트 PASS
 
   **Commit**: YES
   - Message: `feat(game): implement Renju rule engine with TDD`
@@ -1008,7 +1008,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ### Wave 2: Core Features
 
-- [ ] 4. SignalR GameHub 구현
+- [x] 4. SignalR GameHub 구현
 
   **What to do**:
   - `GameHub` (`/hubs/game`): JoinGame, PlaceStone, Resign 메서드 구현
@@ -1066,7 +1066,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ---
 
-- [ ] 5. Google OAuth 인증
+- [x] 5. Google OAuth 인증
 
   **What to do**:
   - Google OAuth 2.0 설정 (ID Token 검증 방식)
@@ -1173,7 +1173,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ---
 
-- [ ] 5a. REST API 컨트롤러 (Users, Rankings)
+- [x] 5a. REST API 컨트롤러 (Users, Rankings)
 
   **What to do**:
   - `UsersController.cs`: GET `/api/users/me` - 내 프로필 조회
@@ -1260,7 +1260,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ---
 
-- [ ] 6. 매칭 시스템 구현
+- [x] 6. 매칭 시스템 구현
 
   **What to do**:
   - `MatchmakingHub` (`/hubs/matchmaking`): JoinMatchmaking, LeaveMatchmaking
@@ -1308,7 +1308,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ---
 
-- [ ] 7. Flutter 기본 구조 및 라우팅
+- [x] 7. Flutter 기본 구조 및 라우팅
 
   **What to do**:
   - Riverpod 상태 관리 설정
@@ -1355,7 +1355,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ### Wave 3: Integration
 
-- [ ] 8. Flutter 게임 보드 UI
+- [x] 8. Flutter 게임 보드 UI
 
   **What to do**:
   - 15×15 오목 보드 렌더링
@@ -1405,7 +1405,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ---
 
-- [ ] 9. Flutter 매칭/로비 UI
+- [x] 9. Flutter 매칭/로비 UI
 
   **What to do**:
   - 로비 화면: "매칭 찾기" 버튼, 사용자 정보 표시
@@ -1449,7 +1449,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ---
 
-- [ ] 10. Flutter 전적/랭킹 UI
+- [x] 10. Flutter 전적/랭킹 UI
 
   **What to do**:
   - 프로필 화면: ELO, 승, 패, 승률, 게임 수
@@ -1490,7 +1490,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 4 → Task 8 → Task 11
 
 ---
 
-- [ ] 11. 통합 테스트 및 마무리
+- [x] 11. 통합 테스트 및 마무리
 
   **What to do**:
   - End-to-End 시나리오 테스트
@@ -1568,14 +1568,14 @@ flutter test  # Expected: All tests pass
 ```
 
 ### Final Checklist
-- [ ] Google 로그인 동작
-- [ ] 랜덤 매칭 동작
-- [ ] 오목 대전 실시간 동기화
-- [ ] 렌주룰 정상 작동
-- [ ] 30초 타이머 동작
-- [ ] ELO 변동 확인
-- [ ] 랭킹 페이지 동작
-- [ ] 모든 테스트 통과
+- [x] Google 로그인 동작
+- [x] 랜덤 매칭 동작
+- [x] 오목 대전 실시간 동기화
+- [x] 렌주룰 정상 작동
+- [x] 30초 타이머 동작
+- [x] ELO 변동 확인
+- [x] 랭킹 페이지 동작
+- [x] 모든 테스트 통과
 
 ---
 
