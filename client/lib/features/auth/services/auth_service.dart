@@ -9,9 +9,7 @@ class AuthService {
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'auth_user';
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   Future<({String token, UserModel user})?> signInWithGoogle() async {
     try {
@@ -30,7 +28,11 @@ class AuthService {
       final response = await http.post(
         Uri.parse('${ApiConstants.baseUrl}${ApiConstants.authGoogle}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'idToken': idToken}),
+        body: jsonEncode({
+          'idToken': idToken,
+          'email': googleUser.email,
+          'displayName': googleUser.displayName,
+        }),
       );
 
       if (response.statusCode != 200) {
@@ -38,7 +40,7 @@ class AuthService {
       }
 
       final data = jsonDecode(response.body);
-      final token = data['token'] as String;
+      final token = data['access_token'] as String;
       final user = UserModel.fromJson(data['user']);
 
       await _saveAuthData(token, user);
