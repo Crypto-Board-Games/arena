@@ -71,11 +71,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 final shouldLeave = await _showLeaveConfirmDialog(context);
                 if (shouldLeave == true) {
                   await ref.read(gameProvider.notifier).resign();
-                  if (mounted) context.go('/home');
+                  if (mounted) context.go('/lobby');
                 }
               } else {
                 await ref.read(gameProvider.notifier).leaveGame();
-                if (mounted) context.go('/home');
+                if (mounted) context.go('/lobby');
               }
             },
           ),
@@ -90,7 +90,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   name: gameState.opponentName ?? '상대방',
                   elo: gameState.opponentElo,
                   isCurrentTurn: !gameState.isMyTurn,
-                  remainingSeconds: !gameState.isMyTurn ? gameState.remainingSeconds : null,
+                  remainingSeconds: !gameState.isMyTurn
+                      ? gameState.remainingSeconds
+                      : null,
                   color: gameState.myColor == 'black' ? 'white' : 'black',
                   isConnected: gameState.opponentConnected,
                 ),
@@ -101,10 +103,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 Expanded(
                   child: Center(
                     child: gameState.status == GameStatus.connecting
-                        ? const CircularProgressIndicator(color: AppTheme.accent)
+                        ? const CircularProgressIndicator(
+                            color: AppTheme.accent,
+                          )
                         : GameBoardWidget(
                             board: gameState.board,
-                            isMyTurn: gameState.isMyTurn && !gameState.isGameOver,
+                            isMyTurn:
+                                gameState.isMyTurn && !gameState.isGameOver,
                             onCellTap: (x, y) {
                               setState(() {
                                 lastMoveX = x;
@@ -124,7 +129,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 _buildPlayerInfo(
                   name: '나',
                   isCurrentTurn: gameState.isMyTurn,
-                  remainingSeconds: gameState.isMyTurn ? gameState.remainingSeconds : null,
+                  remainingSeconds: gameState.isMyTurn
+                      ? gameState.remainingSeconds
+                      : null,
                   color: gameState.myColor ?? 'black',
                   showResign: gameState.status == GameStatus.inProgress,
                   onResign: () => _showResignConfirmDialog(context),
@@ -166,12 +173,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             height: 32.w,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: color == 'black' ? AppTheme.blackStone : AppTheme.whiteStone,
+              color: color == 'black'
+                  ? AppTheme.blackStone
+                  : AppTheme.whiteStone,
               border: Border.all(color: Colors.grey, width: 1),
             ),
           ),
           SizedBox(width: 12.w),
-          
+
           // Name and Elo
           Expanded(
             child: Column(
@@ -190,7 +199,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     if (!isConnected) ...[
                       SizedBox(width: 8.w),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.w,
+                          vertical: 2.h,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.error.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(4.r),
@@ -217,7 +229,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               ],
             ),
           ),
-          
+
           // Timer or Resign button
           if (remainingSeconds != null && isCurrentTurn)
             Container(
@@ -244,10 +256,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               onPressed: onResign,
               child: Text(
                 '기권',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: AppTheme.error,
-                ),
+                style: TextStyle(fontSize: 14.sp, color: AppTheme.error),
               ),
             ),
         ],
@@ -325,10 +334,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           children: [
             Text(
               _getEndReasonText(state.endReason),
-              style: TextStyle(
-                fontSize: 16.sp,
-                color: AppTheme.textSecondary,
-              ),
+              style: TextStyle(fontSize: 16.sp, color: AppTheme.textSecondary),
             ),
             if (state.eloChange != null) ...[
               SizedBox(height: 16.h),
@@ -337,7 +343,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 style: TextStyle(
                   fontSize: 20.sp,
                   fontWeight: FontWeight.bold,
-                  color: state.eloChange! >= 0 ? AppTheme.success : AppTheme.error,
+                  color: state.eloChange! >= 0
+                      ? AppTheme.success
+                      : AppTheme.error,
                 ),
               ),
             ],
@@ -350,7 +358,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               onPressed: () {
                 Navigator.pop(context);
                 ref.read(gameProvider.notifier).leaveGame();
-                context.go('/home');
+                context.go('/lobby');
               },
               child: const Text('홈으로'),
             ),

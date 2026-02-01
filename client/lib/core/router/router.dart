@@ -6,6 +6,8 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/game/screens/game_screen.dart';
+import '../../features/profile/screens/profile_screen.dart';
+import '../../features/ranking/screens/ranking_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -15,6 +17,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isAuthenticated = authState.status == AuthStatus.authenticated;
       final isLoggingIn = state.matchedLocation == '/login';
+      final isLobby = state.matchedLocation == '/lobby';
       final isInitial = authState.status == AuthStatus.initial;
       final isLoading = authState.status == AuthStatus.loading;
 
@@ -28,20 +31,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (isAuthenticated && isLoggingIn) {
-        return '/home';
+        return '/lobby';
+      }
+
+      if (isAuthenticated && state.matchedLocation == '/home') {
+        return '/lobby';
+      }
+
+      if (isAuthenticated && isLobby) {
+        return null;
       }
 
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: '/home',
-        builder: (context, state) => const HomeScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/lobby', builder: (context, state) => const HomeScreen()),
       GoRoute(
         path: '/game/:gameId',
         builder: (context, state) {
@@ -49,11 +54,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           return GameScreen(gameId: gameId);
         },
       ),
-    ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Page not found: ${state.error}'),
+      GoRoute(
+        path: '/ranking',
+        builder: (context, state) => const RankingScreen(),
       ),
-    ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+    ],
+    errorBuilder: (context, state) =>
+        Scaffold(body: Center(child: Text('Page not found: ${state.error}'))),
   );
 });
