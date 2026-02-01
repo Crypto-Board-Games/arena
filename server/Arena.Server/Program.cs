@@ -31,6 +31,8 @@ builder.Services.AddSingleton<IEloCalculator, EloCalculator>();
 builder.Services.AddSingleton<ConcurrentDictionary<Guid, GameSession>>();
 builder.Services.AddSingleton<ConcurrentDictionary<string, Guid>>();
 
+builder.Services.AddHostedService<MatchmakingService>();
+
 builder.Services.AddSignalR();
 
 builder.Services.AddHealthChecks()
