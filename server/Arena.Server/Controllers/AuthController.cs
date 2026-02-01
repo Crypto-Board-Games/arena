@@ -28,7 +28,36 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
+            GoogleJsonWebSignature.Payload? payload = null;
+
+            if (HttpContext.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment() &&
+                request.IdToken == "dev_bypass_token")
+            {
+                // Development-only bypass for local testing.
+                payload = new GoogleJsonWebSignature.Payload
+                {
+                    Subject = request.Email ?? Guid.NewGuid().ToString("N"),
+                    Email = request.Email ?? "test@example.com",
+                    Name = request.DisplayName
+                };
+            }
+            else
+            {
+                var googleClientId = _configuration["Google:ClientId"];
+                if (!string.IsNullOrWhiteSpace(googleClientId))
+                {
+                    payload = await GoogleJsonWebSignature.ValidateAsync(
+                        request.IdToken,
+                        new GoogleJsonWebSignature.ValidationSettings
+                        {
+                            Audience = new[] { googleClientId }
+                        });
+                }
+                else
+                {
+                    payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
+                }
+            }
 
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.GoogleId == payload.Subject);
 
@@ -49,19 +78,20 @@ public class AuthController : ControllerBase
                 await _dbContext.SaveChangesAsync();
             }
 
-            var token = GenerateJwtToken(user);
+            var (token, expiresIn) = GenerateJwtToken(user);
 
-            return Ok(new AuthResponse
+            return Ok(new
             {
-                Token = token,
-                User = new UserDto
+                access_token = token,
+                expires_in = expiresIn,
+                user = new
                 {
-                    Id = user.Id,
-                    Email = user.Email,
-                    DisplayName = user.DisplayName,
-                    Elo = user.Elo,
-                    Wins = user.Wins,
-                    Losses = user.Losses
+                    id = user.Id,
+                    email = user.Email,
+                    displayName = user.DisplayName,
+                    elo = user.Elo,
+                    wins = user.Wins,
+                    losses = user.Losses
                 }
             });
         }
@@ -71,17 +101,24 @@ public class AuthController : ControllerBase
         }
     }
 
-    private string GenerateJwtToken(User user)
+    private (string token, int expiresIn) GenerateJwtToken(User user)
     {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "arena-secret-key-for-development-minimum-32-chars"));
+        var secret = _configuration["Jwt:Secret"]
+            ?? _configuration["Jwt:Key"]
+            ?? "arena-secret-key-for-development-minimum-32-chars";
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var now = DateTime.UtcNow;
+        var expiresAt = now.AddHours(24);
 
         var claims = new[]
         {
             new Claim("sub", user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim("email", user.Email),
             new Claim("name", user.DisplayName),
+            new Claim(JwtRegisteredClaimNames.Iat, ((DateTimeOffset)now).ToUnixTimeSeconds().ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
@@ -89,31 +126,19 @@ public class AuthController : ControllerBase
             issuer: _configuration["Jwt:Issuer"] ?? "arena",
             audience: _configuration["Jwt:Audience"] ?? "arena",
             claims: claims,
-            expires: DateTime.UtcNow.AddDays(7),
+            expires: expiresAt,
             signingCredentials: credentials
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return (new JwtSecurityTokenHandler().WriteToken(token), expiresIn: 86400);
     }
 }
 
 public class GoogleAuthRequest
 {
     public string IdToken { get; set; } = string.Empty;
-}
 
-public class AuthResponse
-{
-    public string Token { get; set; } = string.Empty;
-    public UserDto User { get; set; } = null!;
-}
+    public string? Email { get; set; }
 
-public class UserDto
-{
-    public Guid Id { get; set; }
-    public string Email { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
-    public int Elo { get; set; }
-    public int Wins { get; set; }
-    public int Losses { get; set; }
+    public string? DisplayName { get; set; }
 }

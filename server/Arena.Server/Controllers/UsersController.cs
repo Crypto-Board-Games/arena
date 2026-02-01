@@ -1,4 +1,5 @@
 using Arena.Models;
+using Arena.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -32,14 +33,22 @@ public class UsersController : ControllerBase
             return NotFound();
         }
 
-        return Ok(new UserDto
+        var gamesPlayed = user.Wins + user.Losses;
+        var winRate = gamesPlayed > 0 ? (double)user.Wins / gamesPlayed * 100 : 0;
+
+        var rank = await CalculateRank(user);
+
+        return Ok(new
         {
-            Id = user.Id,
-            Email = user.Email,
-            DisplayName = user.DisplayName,
-            Elo = user.Elo,
-            Wins = user.Wins,
-            Losses = user.Losses
+            id = user.Id,
+            displayName = user.DisplayName,
+            email = user.Email,
+            elo = user.Elo,
+            wins = user.Wins,
+            losses = user.Losses,
+            winRate,
+            gamesPlayed,
+            rank
         });
     }
 
@@ -52,14 +61,14 @@ public class UsersController : ControllerBase
             return NotFound();
         }
 
-        return Ok(new UserDto
+        return Ok(new
         {
-            Id = user.Id,
-            Email = user.Email,
-            DisplayName = user.DisplayName,
-            Elo = user.Elo,
-            Wins = user.Wins,
-            Losses = user.Losses
+            id = user.Id,
+            email = user.Email,
+            displayName = user.DisplayName,
+            elo = user.Elo,
+            wins = user.Wins,
+            losses = user.Losses
         });
     }
 
@@ -71,5 +80,15 @@ public class UsersController : ControllerBase
             return userId;
         }
         return null;
+    }
+
+    private async Task<int> CalculateRank(User user)
+    {
+        var betterCount = await _dbContext.Users.CountAsync(u =>
+            u.Elo > user.Elo ||
+            (u.Elo == user.Elo && u.Wins > user.Wins) ||
+            (u.Elo == user.Elo && u.Wins == user.Wins && u.CreatedAt < user.CreatedAt));
+
+        return betterCount + 1;
     }
 }

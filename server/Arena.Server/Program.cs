@@ -41,16 +41,23 @@ builder.Services.AddHealthChecks()
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
+
+        var secret = builder.Configuration["Jwt:Secret"]
+            ?? builder.Configuration["Jwt:Key"]
+            ?? "arena-secret-key-for-development-minimum-32-chars";
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+            NameClaimType = "sub",
             ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "arena",
             ValidAudience = builder.Configuration["Jwt:Audience"] ?? "arena",
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "arena-secret-key-for-development-minimum-32-chars"))
+                Encoding.UTF8.GetBytes(secret))
         };
         
         options.Events = new JwtBearerEvents
