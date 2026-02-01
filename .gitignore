@@ -371,5 +371,13 @@ FodyWeavers.xsd
 *.secrets.json
 *.env
 
-# Auto-generated nul file from Windows command errors
+# Tooling artifacts
 nul
+
+# Local dev databases
+*.db
+*.db-shm
+*.db-wal
+
+# Stitch workspace binding
+.stitch-project.json

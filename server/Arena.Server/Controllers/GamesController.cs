@@ -70,13 +70,13 @@ public class GamesController(ArenaDbContext dbContext) : ControllerBase
         return Ok(new GameDetailDto
         {
             Id = game.Id,
-            BlackPlayer = blackPlayer != null ? new UserDto
+            BlackPlayer = blackPlayer != null ? new GameUserDto
             {
                 Id = blackPlayer.Id,
                 DisplayName = blackPlayer.DisplayName,
                 Elo = blackPlayer.Elo
             } : null,
-            WhitePlayer = whitePlayer != null ? new UserDto
+            WhitePlayer = whitePlayer != null ? new GameUserDto
             {
                 Id = whitePlayer.Id,
                 DisplayName = whitePlayer.DisplayName,
@@ -123,16 +123,17 @@ public class GameDto
 public class GameDetailDto
 {
     public Guid Id { get; set; }
-
-    public UserDto? BlackPlayer { get; set; }
-    public UserDto? WhitePlayer { get; set; }
-
-    public string? WinnerId
-    {
-        get; set;
-    }
-
+    public GameUserDto? BlackPlayer { get; set; }
+    public GameUserDto? WhitePlayer { get; set; }
+    public Guid? WinnerId { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime? EndedAt { get; set; }
+}
+
+public class GameUserDto
+{
+    public Guid Id { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
+    public int Elo { get; set; }
 }

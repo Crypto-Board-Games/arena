@@ -37,7 +37,11 @@ class AuthService {
       final response = await http.post(
         Uri.parse('${ApiConstants.baseUrl}${ApiConstants.authGoogle}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(googleUser.toJson()),
+        body: jsonEncode({
+          'idToken': idToken,
+          'email': googleUser.email,
+          'displayName': googleUser.displayName,
+        }),
       );
 
       if (response.statusCode != 200) {
@@ -45,7 +49,7 @@ class AuthService {
       }
 
       final data = jsonDecode(response.body);
-      final token = data['token'] as String;
+      final token = data['access_token'] as String;
       final user = UserModel.fromJson(data['user']);
 
       await _saveAuthData(token, user);

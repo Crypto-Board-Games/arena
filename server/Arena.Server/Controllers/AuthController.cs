@@ -17,52 +17,117 @@ public class AuthController(ILogger<AuthController> logger, IAuthorizationServic
     {
         if (string.IsNullOrEmpty(googleUser.Email) || string.IsNullOrEmpty(googleUser.Id))
         {
-            return BadRequest("important element was missing from the sign-up process.");
-        }
-        (IdentityResult result, ArenaUser? user) = await authService.SignAsync(googleUser, GoogleDefaults.AuthenticationScheme, googleUser.Id, googleUser.Email);
+            GoogleJsonWebSignature.Payload? payload = null;
 
-        if (result.Succeeded && user != null)
-        {
-            return Ok(new AuthResponse
+            if (HttpContext.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment() &&
+                request.IdToken == "dev_bypass_token")
             {
-                User = new UserDto
+                // Development-only bypass for local testing.
+                payload = new GoogleJsonWebSignature.Payload
                 {
-                    Id = user.Id,
-                    Email = user.Email,
-                    DisplayName = user.DisplayName,
-                    Elo = user.Elo,
-                    Wins = user.Wins,
-                    Losses = user.Losses
-                },
-                Token = jwtService.GenerateJwtToken(user)
+                    Subject = request.Email ?? Guid.NewGuid().ToString("N"),
+                    Email = request.Email ?? "test@example.com",
+                    Name = request.DisplayName
+                };
+            }
+            else
+            {
+                var googleClientId = _configuration["Google:ClientId"];
+                if (!string.IsNullOrWhiteSpace(googleClientId))
+                {
+                    payload = await GoogleJsonWebSignature.ValidateAsync(
+                        request.IdToken,
+                        new GoogleJsonWebSignature.ValidationSettings
+                        {
+                            Audience = new[] { googleClientId }
+                        });
+                }
+                else
+                {
+                    payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
+                }
+            }
+
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.GoogleId == payload.Subject);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    Id = Guid.NewGuid(),
+                    GoogleId = payload.Subject,
+                    Email = payload.Email,
+                    DisplayName = payload.Name ?? payload.Email.Split('@')[0],
+                    Elo = 1200,
+                    Wins = 0,
+                    Losses = 0,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _dbContext.Users.Add(user);
+                await _dbContext.SaveChangesAsync();
+            }
+
+            var (token, expiresIn) = GenerateJwtToken(user);
+
+            return Ok(new
+            {
+                access_token = token,
+                expires_in = expiresIn,
+                user = new
+                {
+                    id = user.Id,
+                    email = user.Email,
+                    displayName = user.DisplayName,
+                    elo = user.Elo,
+                    wins = user.Wins,
+                    losses = user.Losses
+                }
             });
         }
-
-        foreach (var err in result.Errors)
+        catch (InvalidJwtException)
         {
-            logger.LogError("Code: { }\nDescription: { }", err.Code, err.Description);
+            return Unauthorized(new { message = "Invalid Google token" });
         }
-        return Unauthorized(new { message = result.Errors });
+    }
+
+    private (string token, int expiresIn) GenerateJwtToken(User user)
+    {
+        var secret = _configuration["Jwt:Secret"]
+            ?? _configuration["Jwt:Key"]
+            ?? "arena-secret-key-for-development-minimum-32-chars";
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var now = DateTime.UtcNow;
+        var expiresAt = now.AddHours(24);
+
+        var claims = new[]
+        {
+            new Claim("sub", user.Id.ToString()),
+            new Claim("email", user.Email),
+            new Claim("name", user.DisplayName),
+            new Claim(JwtRegisteredClaimNames.Iat, ((DateTimeOffset)now).ToUnixTimeSeconds().ToString()),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: _configuration["Jwt:Issuer"] ?? "arena",
+            audience: _configuration["Jwt:Audience"] ?? "arena",
+            claims: claims,
+            expires: expiresAt,
+            signingCredentials: credentials
+        );
+
+        return (new JwtSecurityTokenHandler().WriteToken(token), expiresIn: 86400);
     }
 }
 
 public class GoogleAuthRequest
 {
     public string IdToken { get; set; } = string.Empty;
-}
 
-public class AuthResponse
-{
-    public string Token { get; set; } = string.Empty;
-    public UserDto User { get; set; } = null!;
-}
-
-public class UserDto
-{
-    public required string Id { get; set; }
     public string? Email { get; set; }
-    public string DisplayName { get; set; } = string.Empty;
-    public int Elo { get; set; }
-    public int Wins { get; set; }
-    public int Losses { get; set; }
+
+    public string? DisplayName { get; set; }
 }

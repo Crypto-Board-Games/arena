@@ -72,7 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.status == AuthStatus.authenticated) {
-        context.go('/home');
+        context.go('/lobby');
       } else if (next.status == AuthStatus.error && next.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -107,59 +107,111 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ),
         ),
         child: SafeArea(
-          child: ResponsiveContainer(
-            maxWidth: 420,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isSmallScreen = constraints.maxHeight < 700;
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32.w),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(flex: 2),
 
-                    return SingleChildScrollView(
-                      physics: const ClampingScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight,
+                // Logo
+                Container(
+                  width: 120.w,
+                  height: 120.w,
+                  decoration: BoxDecoration(
+                    color: AppTheme.boardColor,
+                    borderRadius: BorderRadius.circular(24.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Grid lines
+                        ...List.generate(5, (i) {
+                          final offset = (i - 2) * 20.0;
+                          return Positioned(
+                            child: Transform.translate(
+                              offset: Offset(0, offset),
+                              child: Container(
+                                width: 80.w,
+                                height: 1,
+                                color: AppTheme.boardLineColor.withOpacity(0.5),
+                              ),
+                            ),
+                          );
+                        }),
+                        // Stones
+                        Positioned(
+                          left: 25.w,
+                          top: 25.w,
+                          child: _buildStone(true),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(height: isSmallScreen ? 20 : 40),
-
-                            _buildEnhancedLogo(context, isSmallScreen),
-
-                            SizedBox(height: isSmallScreen ? 32 : 48),
-
-                            _buildAnimatedTitle(),
-
-                            const SizedBox(height: 12),
-
-                            _buildSubtitle(),
-
-                            SizedBox(height: isSmallScreen ? 40 : 64),
-
-                            _buildFeaturesCard(isSmallScreen),
-
-                            SizedBox(height: isSmallScreen ? 32 : 48),
-
-                            // Google Sign-In Button - Following Official Guidelines
-                            _buildGoogleSignInButton(context, ref, authState),
-
-                            const SizedBox(height: 20),
-
-                            _buildTermsText(),
-
-                            SizedBox(height: isSmallScreen ? 20 : 32),
-                          ],
+                        Positioned(
+                          right: 25.w,
+                          bottom: 25.w,
+                          child: _buildStone(false),
                         ),
+                        Positioned(child: _buildStone(true)),
+                      ],
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: 32.h),
+
+                // Title
+                Text(
+                  'Arena',
+                  style: TextStyle(
+                    fontSize: 48.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                    letterSpacing: 4,
+                  ),
+                ),
+
+                SizedBox(height: 8.h),
+
+                Text(
+                  '온라인 오목 대전',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    color: AppTheme.textSecondary,
+                    letterSpacing: 2,
+                  ),
+                ),
+
+                const Spacer(flex: 2),
+
+                // Google Sign In Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56.h,
+                  child: ElevatedButton(
+                    onPressed: authState.isLoading
+                        ? null
+                        : () => ref
+                              .read(authProvider.notifier)
+                              .signInWithGoogle(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
                     );
                   },
                 ),
-              ),
+
+                const Spacer(),
+              ],
             ),
           ),
         ),

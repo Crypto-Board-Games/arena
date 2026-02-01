@@ -167,70 +167,186 @@ class HomeScreen extends ConsumerWidget {
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
-              ],
-            ),
-            child: Center(
-              child: Container(
-                width: 82,
-                height: 82,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.bgContentsDark,
-                ),
-                child: Center(
-                  child: Text(
-                    user?.displayName.isNotEmpty == true
-                        ? user!.displayName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.fontPrimaryDark,
+                child: Column(
+                  children: [
+                    // Avatar
+                    Container(
+                      width: 80.w,
+                      height: 80.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.primary,
+                        border: Border.all(color: AppTheme.accent, width: 3),
+                      ),
+                      child: Center(
+                        child: Text(
+                          user?.displayName.isNotEmpty == true
+                              ? user!.displayName[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            fontSize: 32.sp,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+
+                    // Name
+                    Text(
+                      user?.displayName ?? 'Unknown',
+                      style: TextStyle(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+
+                    // Elo
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star, color: AppTheme.accent, size: 20.sp),
+                        SizedBox(width: 4.w),
+                        Text(
+                          'Elo ${user?.elo ?? 1200}',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: AppTheme.accent,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+
+                    // Stats
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStat('승', user?.wins ?? 0, AppTheme.success),
+                        Container(
+                          width: 1,
+                          height: 40.h,
+                          color: AppTheme.surfaceLight,
+                        ),
+                        _buildStat('패', user?.losses ?? 0, AppTheme.error),
+                        Container(
+                          width: 1,
+                          height: 40.h,
+                          color: AppTheme.surfaceLight,
+                        ),
+                        _buildStat(
+                          '승률',
+                          user != null && user.totalGames > 0
+                              ? '${user.winRate.toStringAsFixed(1)}%'
+                              : '-',
+                          AppTheme.textSecondary,
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
 
-          // Name
-          Text(
-            user?.displayName ?? 'Unknown',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.fontPrimaryDark,
-            ),
-          ),
-          const SizedBox(height: 6),
+              const Spacer(),
 
-          // Elo with badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.main.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.emoji_events_rounded,
-                  color: AppTheme.main,
-                  size: 18,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Elo ${user?.elo ?? 1200}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppTheme.main,
-                    fontWeight: FontWeight.bold,
+              // Matchmaking Button
+              if (matchmakingState.isSearching)
+                Column(
+                  children: [
+                    SizedBox(
+                      width: 80.w,
+                      height: 80.w,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: AppTheme.accent,
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    Text(
+                      '상대를 찾는 중...',
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      '대기 ${matchmakingState.waitingSeconds}s · 범위 ±${matchmakingState.currentRange}',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    TextButton(
+                      onPressed: () {
+                        ref.read(matchmakingProvider.notifier).cancelSearch();
+                      },
+                      child: Text(
+                        '취소',
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          color: AppTheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  height: 64.h,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      ref.read(matchmakingProvider.notifier).startSearching();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.sports_esports, size: 28.sp),
+                        SizedBox(width: 12.w),
+                        Text(
+                          '대전 찾기',
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+
+              const Spacer(),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => context.go('/ranking'),
+                      child: const Text('랭킹'),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => context.go('/profile'),
+                      child: const Text('프로필'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),
@@ -300,11 +416,7 @@ class HomeScreen extends ConsumerWidget {
         const SizedBox(height: 6),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: AppTheme.fontTertiaryDark,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 12.sp, color: AppTheme.textSecondary),
         ),
       ],
     );

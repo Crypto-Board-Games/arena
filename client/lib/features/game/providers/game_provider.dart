@@ -14,13 +14,15 @@ final gameHubServiceProvider = Provider<GameHubService>((ref) {
 
 final gameProvider = StateNotifierProvider<GameNotifier, GameState>((ref) {
   final hubService = ref.watch(gameHubServiceProvider);
-  return GameNotifier(hubService);
+  final authState = ref.watch(authProvider);
+  return GameNotifier(hubService, authState.user?.id);
 });
 
 class GameNotifier extends StateNotifier<GameState> {
   final GameHubService _hubService;
+  final String? _myUserId;
 
-  GameNotifier(this._hubService) : super(GameState()) {
+  GameNotifier(this._hubService, this._myUserId) : super(GameState()) {
     _setupListeners();
   }
 
@@ -59,18 +61,17 @@ class GameNotifier extends StateNotifier<GameState> {
 
     _hubService.onGameEnded = (data) {
       final eloChangeData = data['eloChange'] as Map<String, dynamic>?;
-      final myColorIsWinner =
-          state.winnerId != null &&
-          ((state.myColor == 'black' && data['winnerId'] == state.gameId) ||
-              (state.myColor == 'white' && data['winnerId'] != state.gameId));
+      final winnerId = data['winnerId'] as String?;
+      final iWon =
+          winnerId != null && _myUserId != null && winnerId == _myUserId;
 
       state = state.copyWith(
         status: GameStatus.ended,
-        winnerId: data['winnerId'] as String?,
+        winnerId: winnerId,
         endReason: data['reason'] as String?,
-        eloChange: myColorIsWinner
+        eloChange: iWon
             ? (eloChangeData?['winner'] as int?)
-            : eloChangeData?['loser'] as int?,
+            : (eloChangeData?['loser'] as int?),
       );
     };
 
