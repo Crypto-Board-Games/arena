@@ -9,10 +9,26 @@ public enum GameStatus
 
 public class Game
 {
-    public Guid Id { get; set; }
-    public Guid BlackPlayerId { get; set; }
-    public Guid WhitePlayerId { get; set; }
-    public Guid? WinnerId { get; set; }
+    public Guid Id
+    {
+        get; set;
+    }
+
+    public required string BlackPlayerId
+    {
+        get; set;
+    }
+
+    public required string WhitePlayerId
+    {
+        get; set;
+    }
+
+    public string? WinnerId
+    {
+        get; set;
+    }
+
     public GameStatus Status { get; set; } = GameStatus.InProgress;
     public string? CurrentBoardState { get; set; }
     public DateTime CreatedAt { get; set; }

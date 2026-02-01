@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../providers/game_provider.dart';
 import '../providers/game_state.dart';
 import '../widgets/game_board_widget.dart';
@@ -40,27 +40,35 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.errorMessage!),
-            backgroundColor: AppTheme.error,
+            backgroundColor: AppTheme.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
         );
         ref.read(gameProvider.notifier).clearError();
       }
     });
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        
         if (gameState.status == GameStatus.inProgress) {
           final shouldLeave = await _showLeaveConfirmDialog(context);
           if (shouldLeave == true) {
             await ref.read(gameProvider.notifier).resign();
+            if (mounted) context.go('/home');
           }
-          return false;
+        } else {
+          await ref.read(gameProvider.notifier).leaveGame();
+          if (mounted) context.go('/home');
         }
-        await ref.read(gameProvider.notifier).leaveGame();
-        return true;
       },
       child: Scaffold(
-        backgroundColor: AppTheme.background,
+        backgroundColor: AppTheme.bgBasicDark,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -79,14 +87,33 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               }
             },
           ),
+          actions: [
+            if (gameState.status == GameStatus.inProgress)
+              Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.flag_rounded,
+                    color: AppTheme.red,
+                  ),
+                  onPressed: () => _showResignConfirmDialog(context),
+                  tooltip: '기권',
+                ),
+              ),
+          ],
         ),
         body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
+          child: ResponsiveContainer(
+            maxWidth: 600,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
-                // Opponent info
-                _buildPlayerInfo(
+                // Opponent info card
+                _buildPlayerCard(
                   name: gameState.opponentName ?? '상대방',
                   elo: gameState.opponentElo,
                   isCurrentTurn: !gameState.isMyTurn,
@@ -95,11 +122,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       : null,
                   color: gameState.myColor == 'black' ? 'white' : 'black',
                   isConnected: gameState.opponentConnected,
+                  isOpponent: true,
                 ),
 
-                SizedBox(height: 16.h),
+                const SizedBox(height: 20),
 
-                // Game Board
+                // Game Board with modern container
                 Expanded(
                   child: Center(
                     child: gameState.status == GameStatus.connecting
@@ -123,21 +151,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   ),
                 ),
 
-                SizedBox(height: 16.h),
+                const SizedBox(height: 20),
 
-                // My info
-                _buildPlayerInfo(
+                // My info card
+                _buildPlayerCard(
                   name: '나',
                   isCurrentTurn: gameState.isMyTurn,
                   remainingSeconds: gameState.isMyTurn
                       ? gameState.remainingSeconds
                       : null,
                   color: gameState.myColor ?? 'black',
-                  showResign: gameState.status == GameStatus.inProgress,
-                  onResign: () => _showResignConfirmDialog(context),
+                  isConnected: true,
+                  isOpponent: false,
                 ),
 
-                SizedBox(height: 16.h),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -146,31 +174,41 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     );
   }
 
-  Widget _buildPlayerInfo({
+  Widget _buildPlayerCard({
     required String name,
     int? elo,
     required bool isCurrentTurn,
     int? remainingSeconds,
     required String color,
-    bool isConnected = true,
-    bool showResign = false,
-    VoidCallback? onResign,
+    required bool isConnected,
+    required bool isOpponent,
   }) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isCurrentTurn ? AppTheme.surfaceLight : AppTheme.surface,
-        borderRadius: BorderRadius.circular(12.r),
+        color: isCurrentTurn 
+            ? AppTheme.bgContentsDark 
+            : AppTheme.bgContentsDark.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(16),
         border: isCurrentTurn
-            ? Border.all(color: AppTheme.accent, width: 2)
+            ? Border.all(color: AppTheme.main.withOpacity(0.5), width: 2)
+            : null,
+        boxShadow: isCurrentTurn
+            ? [
+                BoxShadow(
+                  color: AppTheme.main.withOpacity(0.15),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ]
             : null,
       ),
       child: Row(
         children: [
-          // Stone indicator
+          // Stone indicator with glow effect
           Container(
-            width: 32.w,
-            height: 32.w,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: color == 'black'
@@ -191,28 +229,49 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     Text(
                       name,
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
+                        color: isCurrentTurn 
+                            ? AppTheme.fontPrimaryDark 
+                            : AppTheme.fontSecondaryDark,
                       ),
                     ),
                     if (!isConnected) ...[
-                      SizedBox(width: 8.w),
+                      const SizedBox(width: 8),
                       Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: 6.w,
                           vertical: 2.h,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.error.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(4.r),
+                          color: AppTheme.red.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(
+                        child: const Text(
                           '연결 끊김',
                           style: TextStyle(
-                            fontSize: 10.sp,
-                            color: AppTheme.error,
+                            fontSize: 11,
+                            color: AppTheme.red,
+                            fontWeight: FontWeight.w500,
                           ),
+                        ),
+                      ),
+                    ],
+                    if (isCurrentTurn) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: AppTheme.main,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.main.withOpacity(0.5),
+                              blurRadius: 6,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -222,8 +281,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   Text(
                     'Elo $elo',
                     style: TextStyle(
-                      fontSize: 12.sp,
-                      color: AppTheme.textSecondary,
+                      fontSize: 13,
+                      color: AppTheme.fontTertiaryDark,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
               ],
@@ -233,17 +293,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           // Timer or Resign button
           if (remainingSeconds != null && isCurrentTurn)
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: remainingSeconds <= 10
-                    ? AppTheme.error.withOpacity(0.2)
-                    : AppTheme.surface,
-                borderRadius: BorderRadius.circular(8.r),
+                    ? AppTheme.red.withOpacity(0.15)
+                    : AppTheme.main.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: remainingSeconds <= 10
+                    ? Border.all(color: AppTheme.red.withOpacity(0.3))
+                    : null,
               ),
               child: Text(
                 '${remainingSeconds}s',
                 style: TextStyle(
-                  fontSize: 20.sp,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: remainingSeconds <= 10
                       ? AppTheme.error
@@ -268,17 +331,39 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('게임 나가기'),
-        content: const Text('게임 중에 나가면 기권 처리됩니다.\n정말 나가시겠습니까?'),
+        backgroundColor: AppTheme.bgContentsDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          '게임 나가기',
+          style: TextStyle(
+            color: AppTheme.fontPrimaryDark,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          '게임 중에 나가면 기권 처리됩니다.\n정말 나가시겠습니까?',
+          style: TextStyle(color: AppTheme.fontSecondaryDark),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
+            child: const Text(
+              '취소',
+              style: TextStyle(color: AppTheme.fontTertiaryDark),
+            ),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('나가기', style: TextStyle(color: AppTheme.error)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.red,
+              foregroundColor: AppTheme.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('나가기'),
           ),
         ],
       ),
@@ -289,17 +374,39 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final shouldResign = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('기권'),
-        content: const Text('정말 기권하시겠습니까?'),
+        backgroundColor: AppTheme.bgContentsDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          '기권',
+          style: TextStyle(
+            color: AppTheme.fontPrimaryDark,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          '정말 기권하시겠습니까?',
+          style: TextStyle(color: AppTheme.fontSecondaryDark),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
+            child: const Text(
+              '취소',
+              style: TextStyle(color: AppTheme.fontTertiaryDark),
+            ),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('기권', style: TextStyle(color: AppTheme.error)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.red,
+              foregroundColor: AppTheme.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('기권'),
           ),
         ],
       ),
@@ -319,23 +426,46 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(
-          isWinner ? '승리!' : '패배',
-          style: TextStyle(
-            color: isWinner ? AppTheme.success : AppTheme.error,
-            fontSize: 24.sp,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
+        backgroundColor: AppTheme.bgContentsDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SizedBox(height: 20),
+            // Result icon
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isWinner 
+                    ? AppTheme.green.withOpacity(0.15)
+                    : AppTheme.red.withOpacity(0.15),
+              ),
+              child: Icon(
+                isWinner ? Icons.emoji_events_rounded : Icons.sentiment_dissatisfied_rounded,
+                size: 40,
+                color: isWinner ? AppTheme.green : AppTheme.red,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Result text
             Text(
               _getEndReasonText(state.endReason),
               style: TextStyle(fontSize: 16.sp, color: AppTheme.textSecondary),
             ),
+            const SizedBox(height: 12),
+            // End reason
+            Text(
+              _getEndReasonText(state.endReason),
+              style: const TextStyle(
+                fontSize: 16,
+                color: AppTheme.fontSecondaryDark,
+              ),
+            ),
+            // Elo change
             if (state.eloChange != null) ...[
               SizedBox(height: 16.h),
               Text(
@@ -349,6 +479,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ),
               ),
             ],
+            const SizedBox(height: 20),
           ],
         ),
         actions: [
@@ -360,7 +491,21 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ref.read(gameProvider.notifier).leaveGame();
                 context.go('/lobby');
               },
-              child: const Text('홈으로'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.main,
+                foregroundColor: AppTheme.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                '홈으로',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],

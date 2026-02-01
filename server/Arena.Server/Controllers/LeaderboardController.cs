@@ -1,4 +1,5 @@
 using Arena.Models;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,14 +7,9 @@ namespace Arena.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class LeaderboardController : ControllerBase
+public class LeaderboardController(ArenaDbContext dbContext) : ControllerBase
 {
-    private readonly ArenaDbContext _dbContext;
-
-    public LeaderboardController(ArenaDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly ArenaDbContext _dbContext = dbContext;
 
     [HttpGet]
     public async Task<IActionResult> GetLeaderboard([FromQuery] int limit = 100)
@@ -68,8 +64,16 @@ public class LeaderboardController : ControllerBase
 public class LeaderboardEntryDto
 {
     public int Rank { get; set; }
-    public Guid UserId { get; set; }
-    public string DisplayName { get; set; } = string.Empty;
+    public required string UserId
+    {
+        get; set;
+    }
+
+    public required string DisplayName
+    {
+        get; set;
+    }
+
     public int Elo { get; set; }
     public int Wins { get; set; }
     public int Losses { get; set; }

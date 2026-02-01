@@ -8,14 +8,9 @@ namespace Arena.Server.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController : ControllerBase
+public class UsersController(ArenaDbContext dbContext) : ControllerBase
 {
-    private readonly ArenaDbContext _dbContext;
-
-    public UsersController(ArenaDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly ArenaDbContext _dbContext = dbContext;
 
     [HttpGet("me")]
     [Authorize]

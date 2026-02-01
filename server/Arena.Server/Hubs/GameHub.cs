@@ -1,42 +1,27 @@
 using Arena.Models;
 using Arena.Models.Entities;
-using Arena.Server.Game;
+using Arena.Server.Core;
 using Arena.Server.Models;
-using Arena.Server.Services;
+
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+
 using System.Collections.Concurrent;
-using System.Text.Json;
 
 namespace Arena.Server.Hubs;
 
-public class GameHub : Hub
+public class GameHub(ArenaDbContext dbContext, IEloCalculator eloCalculator, ConcurrentDictionary<Guid, GameSession> gameSessions, ConcurrentDictionary<string, string> connectionUserMap) : Hub
 {
-    private readonly ArenaDbContext _dbContext;
-    private readonly IEloCalculator _eloCalculator;
-    private readonly ConcurrentDictionary<Guid, GameSession> _gameSessions;
-    private readonly ConcurrentDictionary<string, Guid> _connectionUserMap;
     private const int TurnTimeSeconds = 30;
     private const int DisconnectGraceSeconds = 30;
-
-    public GameHub(
-        ArenaDbContext dbContext,
-        IEloCalculator eloCalculator,
-        ConcurrentDictionary<Guid, GameSession> gameSessions,
-        ConcurrentDictionary<string, Guid> connectionUserMap)
-    {
-        _dbContext = dbContext;
-        _eloCalculator = eloCalculator;
-        _gameSessions = gameSessions;
-        _connectionUserMap = connectionUserMap;
-    }
 
     public override async Task OnConnectedAsync()
     {
         var userId = GetUserId();
-        if (userId.HasValue)
+
+        if (!string.IsNullOrEmpty(userId))
         {
-            _connectionUserMap[Context.ConnectionId] = userId.Value;
+            connectionUserMap[Context.ConnectionId] = userId;
         }
         await base.OnConnectedAsync();
     }
@@ -44,25 +29,26 @@ public class GameHub : Hub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var userId = GetUserId();
-        _connectionUserMap.TryRemove(Context.ConnectionId, out _);
-        
-        if (userId.HasValue)
+
+        connectionUserMap.TryRemove(Context.ConnectionId, out _);
+
+        if (!string.IsNullOrEmpty(userId))
         {
-            foreach (var session in _gameSessions.Values.Where(s => 
-                !s.IsGameEnded && (s.BlackPlayerId == userId.Value || s.WhitePlayerId == userId.Value)))
+            foreach (var session in gameSessions.Values.Where(s => !s.IsGameEnded && (userId.Equals(s.BlackPlayerId) || userId.Equals(s.WhitePlayerId))))
             {
-                session.DisconnectedPlayerId = userId.Value;
+                session.DisconnectedPlayerId = userId;
+
                 await Clients.Group(session.GameId.ToString())
                     .SendAsync("OnOpponentDisconnected", new { gracePeriodSeconds = DisconnectGraceSeconds });
-                
+
                 session.DisconnectGraceTimer = new Timer(
-                    async _ => await HandleDisconnectTimeout(session.GameId, userId.Value),
+                    async _ => await HandleDisconnectTimeout(session.GameId, userId),
                     null,
                     DisconnectGraceSeconds * 1000,
                     Timeout.Infinite);
             }
         }
-        
+
         await base.OnDisconnectedAsync(exception);
     }
 
@@ -74,7 +60,7 @@ public class GameHub : Hub
             return;
         }
 
-        var game = await _dbContext.Games.FindAsync(gameId);
+        var game = await dbContext.Games.FindAsync(gameId);
         if (game == null)
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x = -1, y = -1, reason = "game_not_found" });
@@ -82,24 +68,26 @@ public class GameHub : Hub
         }
 
         var userId = GetUserId();
-        if (!userId.HasValue || (userId != game.BlackPlayerId && userId != game.WhitePlayerId))
+
+        if (string.IsNullOrEmpty(userId) || !game.BlackPlayerId.Equals(userId) && !game.WhitePlayerId.Equals(userId))
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x = -1, y = -1, reason = "game_not_found" });
+
             return;
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, gameIdStr);
 
-        var session = _gameSessions.GetOrAdd(gameId, _ => CreateSession(game));
-        
-        if (session.DisconnectedPlayerId == userId.Value)
+        var session = gameSessions.GetOrAdd(gameId, _ => CreateSession(game));
+
+        if (userId.Equals(session.DisconnectedPlayerId))
         {
             session.DisconnectedPlayerId = null;
             session.DisconnectGraceTimer?.Dispose();
             session.DisconnectGraceTimer = null;
-            
+
             await Clients.OthersInGroup(gameIdStr).SendAsync("OnOpponentReconnected", new { });
-            
+
             var yourColor = userId == session.BlackPlayerId ? "black" : "white";
             var currentTurn = session.CurrentTurnPlayerId == session.BlackPlayerId ? "black" : "white";
             await Clients.Caller.SendAsync("OnGameResumed", new
@@ -130,7 +118,7 @@ public class GameHub : Hub
 
     public async Task PlaceStone(string gameIdStr, int x, int y)
     {
-        if (!Guid.TryParse(gameIdStr, out var gameId) || !_gameSessions.TryGetValue(gameId, out var session))
+        if (!Guid.TryParse(gameIdStr, out var gameId) || !gameSessions.TryGetValue(gameId, out var session))
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x, y, reason = "game_not_found" });
             return;
@@ -143,15 +131,18 @@ public class GameHub : Hub
         }
 
         var userId = GetUserId();
-        if (!userId.HasValue)
+
+        if (string.IsNullOrEmpty(userId))
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x, y, reason = "not_your_turn" });
+
             return;
         }
 
-        if (session.CurrentTurnPlayerId != userId.Value)
+        if (!userId.Equals(session.CurrentTurnPlayerId))
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x, y, reason = "not_your_turn" });
+
             return;
         }
 
@@ -167,8 +158,10 @@ public class GameHub : Hub
             return;
         }
 
-        var color = session.GetColorByPlayerId(userId.Value);
+        var color = session.GetColorByPlayerId(userId);
+
         var rejection = ValidateMove(session.Board, x, y, color);
+
         if (rejection != null)
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x, y, reason = rejection });
@@ -178,7 +171,7 @@ public class GameHub : Hub
         session.Board[y, x] = color;
         session.TurnTimer?.Dispose();
         session.RemainingSeconds = TurnTimeSeconds;
-        
+
         var colorStr = color == 1 ? "black" : "white";
         await Clients.Group(gameIdStr).SendAsync("OnMoveMade", new
         {
@@ -192,33 +185,35 @@ public class GameHub : Hub
 
         if (CheckWin(session.Board, x, y, color))
         {
-            await EndGame(session, userId.Value, "five_in_row");
+            await EndGame(session, userId, "five_in_row");
             return;
         }
 
-        session.CurrentTurnPlayerId = session.GetOpponentId(userId.Value);
+        session.CurrentTurnPlayerId = session.GetOpponentId(userId);
         StartTurnTimer(session);
     }
 
     public async Task Resign(string gameIdStr)
     {
-        if (!Guid.TryParse(gameIdStr, out var gameId) || !_gameSessions.TryGetValue(gameId, out var session))
+        if (!Guid.TryParse(gameIdStr, out var gameId) || !gameSessions.TryGetValue(gameId, out var session))
         {
             await Clients.Caller.SendAsync("OnMoveRejected", new { x = -1, y = -1, reason = "game_not_found" });
             return;
         }
 
         var userId = GetUserId();
-        if (!userId.HasValue)
+
+        if (string.IsNullOrEmpty(userId))
         {
             return;
         }
 
-        var winnerId = session.GetOpponentId(userId.Value);
+        var winnerId = session.GetOpponentId(userId);
+
         await EndGame(session, winnerId, "resign");
     }
 
-    private GameSession CreateSession(Arena.Models.Entities.Game game)
+    private static GameSession CreateSession(Arena.Models.Entities.Game game)
     {
         var session = new GameSession
         {
@@ -241,7 +236,7 @@ public class GameHub : Hub
     {
         session.TurnTimer?.Dispose();
         session.RemainingSeconds = TurnTimeSeconds;
-        
+
         session.TurnTimer = new Timer(
             async _ => await TimerTick(session.GameId),
             null,
@@ -251,13 +246,13 @@ public class GameHub : Hub
 
     private async Task TimerTick(Guid gameId)
     {
-        if (!_gameSessions.TryGetValue(gameId, out var session) || session.IsGameEnded)
+        if (!gameSessions.TryGetValue(gameId, out var session) || session.IsGameEnded)
         {
             return;
         }
 
         session.RemainingSeconds--;
-        
+
         var currentPlayer = session.CurrentTurnPlayerId == session.BlackPlayerId ? "black" : "white";
         await Clients.Group(gameId.ToString()).SendAsync("OnTimerUpdate", new
         {
@@ -273,9 +268,9 @@ public class GameHub : Hub
         }
     }
 
-    private async Task HandleDisconnectTimeout(Guid gameId, Guid disconnectedUserId)
+    private async Task HandleDisconnectTimeout(Guid gameId, string disconnectedUserId)
     {
-        if (!_gameSessions.TryGetValue(gameId, out var session) || session.IsGameEnded)
+        if (!gameSessions.TryGetValue(gameId, out var session) || session.IsGameEnded)
         {
             return;
         }
@@ -287,7 +282,7 @@ public class GameHub : Hub
         }
     }
 
-    private async Task EndGame(GameSession session, Guid winnerId, string reason)
+    private async Task EndGame(GameSession session, string winnerId, string reason)
     {
         if (session.IsGameEnded)
         {
@@ -301,15 +296,15 @@ public class GameHub : Hub
         session.DisconnectGraceTimer?.Dispose();
 
         var loserId = session.GetOpponentId(winnerId);
-        
-        var winner = await _dbContext.Users.FindAsync(winnerId);
-        var loser = await _dbContext.Users.FindAsync(loserId);
-        var game = await _dbContext.Games.FindAsync(session.GameId);
+
+        var winner = await dbContext.Users.FindAsync(winnerId);
+        var loser = await dbContext.Users.FindAsync(loserId);
+        var game = await dbContext.Games.FindAsync(session.GameId);
 
         if (winner != null && loser != null && game != null)
         {
-            var (winnerNewElo, loserNewElo, winnerChange, loserChange) = 
-                _eloCalculator.Calculate(winner.Elo, loser.Elo);
+            var (winnerNewElo, loserNewElo, winnerChange, loserChange) =
+                eloCalculator.Calculate(winner.Elo, loser.Elo);
 
             winner.Elo = winnerNewElo;
             winner.Wins++;
@@ -324,7 +319,7 @@ public class GameHub : Hub
             game.EndedAt = DateTime.UtcNow;
             game.CurrentBoardState = null;
 
-            await _dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
 
             await Clients.Group(session.GameId.ToString()).SendAsync("OnGameEnded", new
             {
@@ -341,27 +336,28 @@ public class GameHub : Hub
 
     private async Task SaveBoardState(Guid gameId, GameSession session)
     {
-        var game = await _dbContext.Games.FindAsync(gameId);
+        var game = await dbContext.Games.FindAsync(gameId);
         if (game != null)
         {
             game.CurrentBoardState = session.SerializeBoard();
-            await _dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
         }
     }
 
-    private Guid? GetUserId()
+    private string? GetUserId()
     {
         var userIdClaim = Context.User?.FindFirst("sub")?.Value;
-        if (Guid.TryParse(userIdClaim, out var userId))
+
+        if (!string.IsNullOrEmpty(userIdClaim))
         {
-            return userId;
+            return userIdClaim;
         }
-        
-        if (_connectionUserMap.TryGetValue(Context.ConnectionId, out var mappedUserId))
+
+        if (connectionUserMap.TryGetValue(Context.ConnectionId, out var mappedUserId))
         {
             return mappedUserId;
         }
-        
+
         return null;
     }
 
@@ -407,7 +403,7 @@ public class GameHub : Hub
         return HasFiveOrMore(board, x, y, color);
     }
 
-    private static readonly (int dx, int dy)[] Directions = { (1, 0), (0, 1), (1, 1), (1, -1) };
+    private static readonly (int dx, int dy)[] Directions = [(1, 0), (0, 1), (1, 1), (1, -1)];
 
     private static bool HasOverline(int[,] board, int x, int y, int color)
     {
@@ -480,8 +476,8 @@ public class GameHub : Hub
     private static bool HasOpenThree(int[,] board, int x, int y, int dx, int dy)
     {
         var line = GetLine(board, x, y, dx, dy);
-        string[] patterns = { ".BBB.", ".BB.B.", ".B.BB." };
-        
+        string[] patterns = [".BBB.", ".BB.B.", ".B.BB."];
+
         foreach (var pattern in patterns)
         {
             if (HasPattern(line, pattern, 4))
@@ -508,14 +504,14 @@ public class GameHub : Hub
     private static bool HasFour(int[,] board, int x, int y, int dx, int dy)
     {
         var line = GetLine(board, x, y, dx, dy);
-        
+
         for (int start = 0; start <= line.Length - 4; start++)
         {
             if (4 < start || 4 > start + 3)
             {
                 continue;
             }
-            
+
             bool isMatch = true;
             for (int i = 0; i < 4; i++)
             {
@@ -537,7 +533,7 @@ public class GameHub : Hub
             {
                 continue;
             }
-            
+
             int blackCount = 0;
             bool blocked = false;
             for (int i = 0; i < 5; i++)
@@ -592,7 +588,7 @@ public class GameHub : Hub
             {
                 continue;
             }
-            
+
             bool matches = true;
             for (int i = 0; i < pattern.Length; i++)
             {

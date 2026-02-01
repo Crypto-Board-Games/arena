@@ -1,32 +1,21 @@
-using Arena.Models;
 using Arena.Models.Entities;
-using Google.Apis.Auth;
+using Arena.Server.Core;
+using Arena.Server.Services;
+
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace Arena.Server.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
+[ApiController, Route("api/[controller]")]
+public class AuthController(ILogger<AuthController> logger, IAuthorizationService authService, JwtService jwtService) : ControllerBase
 {
-    private readonly ArenaDbContext _dbContext;
-    private readonly IConfiguration _configuration;
-
-    public AuthController(ArenaDbContext dbContext, IConfiguration configuration)
-    {
-        _dbContext = dbContext;
-        _configuration = configuration;
-    }
-
     [HttpPost("google")]
-    public async Task<IActionResult> GoogleAuth([FromBody] GoogleAuthRequest request)
+    public async Task<IActionResult> GoogleAuthAsync([FromBody] GoogleUser googleUser)
     {
-        try
+        if (string.IsNullOrEmpty(googleUser.Email) || string.IsNullOrEmpty(googleUser.Id))
         {
             GoogleJsonWebSignature.Payload? payload = null;
 

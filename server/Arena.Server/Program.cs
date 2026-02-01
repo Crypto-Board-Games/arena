@@ -79,7 +79,49 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseDeveloperExceptionPage().UseMigrationsEndPoint();
+    }
+    else
+    {
+        app.UseExceptionHandler("/Error");
+    }
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        KnownProxies = { }
+    })
+           .UseHttpLogging()
+           .UseResponseCompression()
+           .UseAllowAddress(app.Configuration["AdminSafeList"]!.Split(';'))
+
+           .UseSwagger(setupAction =>
+           {
+               setupAction.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_1;
+           })
+
+           .UseSwaggerUI(setupAction =>
+           {
+               setupAction.DocumentTitle = nameof(Arena);
+               setupAction.RoutePrefix = "api";
+           })
+           .UseDefaultFiles()
+
+           .UseStaticFiles(new StaticFileOptions
+           {
+               ServeUnknownFileTypes = true,
+               DefaultContentType = "application/octet-stream"
+           })
+
+           .UseRouting()
+           .UseCors()
+
+           .UseAuthentication()
+           .UseAuthorization();
+
+    app.MapControllers();
+    app.MapBlazorHub(configureOptions =>
     {
         policy.WithOrigins("http://localhost:8080", "http://localhost:3000")
               .AllowAnyHeader()
@@ -165,7 +207,6 @@ app.MapGet("/weatherforecast", () =>
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    });
+    app.ConfigureHubs().Run();
 }

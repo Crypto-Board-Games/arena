@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/game_hub_service.dart';
+import 'package:flutter_riverpod/legacy.dart';
+
 import '../../auth/providers/auth_provider.dart';
+import '../services/game_hub_service.dart';
 import 'game_state.dart';
 
 final gameHubServiceProvider = Provider<GameHubService>((ref) {

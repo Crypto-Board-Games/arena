@@ -1,4 +1,3 @@
-using Xunit;
 using Arena.Models.Entities;
 
 namespace Arena.Tests.Models;
@@ -11,8 +10,8 @@ public class GameTests
         var game = new Game
         {
             Id = Guid.NewGuid(),
-            BlackPlayerId = Guid.NewGuid(),
-            WhitePlayerId = Guid.NewGuid(),
+            BlackPlayerId = Guid.NewGuid().ToString(),
+            WhitePlayerId = Guid.NewGuid().ToString(),
             CreatedAt = DateTime.UtcNow
         };
 
@@ -23,9 +22,9 @@ public class GameTests
     public void Game_Properties_CanBeSet()
     {
         var gameId = Guid.NewGuid();
-        var blackId = Guid.NewGuid();
-        var whiteId = Guid.NewGuid();
-        var winnerId = Guid.NewGuid();
+        var blackId = Guid.NewGuid().ToString();
+        var whiteId = Guid.NewGuid().ToString();
+        var winnerId = Guid.NewGuid().ToString();
         var createdAt = DateTime.UtcNow;
         var endedAt = DateTime.UtcNow.AddMinutes(30);
         var boardState = "{\"board\":[[0,0,0]]}";
@@ -58,8 +57,8 @@ public class GameTests
         var game = new Game
         {
             Id = Guid.NewGuid(),
-            BlackPlayerId = Guid.NewGuid(),
-            WhitePlayerId = Guid.NewGuid(),
+            BlackPlayerId = Guid.NewGuid().ToString(),
+            WhitePlayerId = Guid.NewGuid().ToString(),
             Status = GameStatus.InProgress,
             CreatedAt = DateTime.UtcNow
         };
@@ -82,8 +81,8 @@ public class GameTests
         var game = new Game
         {
             Id = Guid.NewGuid(),
-            BlackPlayerId = Guid.NewGuid(),
-            WhitePlayerId = Guid.NewGuid(),
+            BlackPlayerId = Guid.NewGuid().ToString(),
+            WhitePlayerId = Guid.NewGuid().ToString(),
             CreatedAt = DateTime.UtcNow
         };
 

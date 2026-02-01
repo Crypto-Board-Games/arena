@@ -1,4 +1,3 @@
-using Xunit;
 using Arena.Models.Entities;
 
 namespace Arena.Tests.Models;
@@ -9,7 +8,7 @@ public class MatchQueueTests
     public void MatchQueue_Properties_CanBeSet()
     {
         var queueId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
+        var userId = Guid.NewGuid().ToString();
         var queuedAt = DateTime.UtcNow;
         var connectionId = "connection123";
 
@@ -35,7 +34,7 @@ public class MatchQueueTests
         var queue = new MatchQueue
         {
             Id = Guid.NewGuid(),
-            UserId = Guid.NewGuid(),
+            UserId = Guid.NewGuid().ToString(),
             Elo = 1200,
             QueuedAt = DateTime.UtcNow
         };
@@ -46,7 +45,7 @@ public class MatchQueueTests
     [Fact]
     public void MatchQueue_RequiredProperties_AreSet()
     {
-        var userId = Guid.NewGuid();
+        var userId = Guid.NewGuid().ToString();
         var queuedAt = DateTime.UtcNow;
 
         var queue = new MatchQueue
@@ -58,8 +57,8 @@ public class MatchQueueTests
         };
 
         Assert.NotEqual(Guid.Empty, queue.Id);
-        Assert.NotEqual(Guid.Empty, queue.UserId);
+        Assert.NotEqual(Guid.Empty.ToString(), queue.UserId);
         Assert.True(queue.Elo > 0);
-        Assert.NotEqual(default(DateTime), queue.QueuedAt);
+        Assert.NotEqual(default, queue.QueuedAt);
     }
 }

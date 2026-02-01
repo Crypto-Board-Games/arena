@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/matchmaking_hub_service.dart';
+import 'package:flutter_riverpod/legacy.dart';
+
 import '../../auth/providers/auth_provider.dart';
+import '../services/matchmaking_hub_service.dart';
 import 'matchmaking_state.dart';
 
 final matchmakingHubServiceProvider = Provider<MatchmakingHubService>((ref) {
